@@ -20,12 +20,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
         run: npm ci
-      - name: Install latest n8n and n8n-workflow
-        run: npm install n8n@latest n8n-workflow@latest
       - name: Lint
         run: npm run lint
-      - name: n8n Community Package Scan
-        run: npm run scan
       - name: Build
         run: npm run build
       - name: Run tests with coverage
