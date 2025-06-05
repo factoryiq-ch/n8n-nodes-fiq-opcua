@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1749132795416" clover="3.2.0">
-  <project timestamp="1749132795416" name="All files">
+<coverage generated="1749132964802" clover="3.2.0">
+  <project timestamp="1749132964802" name="All files">
     <metrics statements="187" coveredstatements="161" conditionals="209" coveredconditionals="134" methods="10" coveredmethods="8" elements="406" coveredelements="303" complexity="0" loc="187" ncloc="187" packages="1" files="1" classes="1"/>
     <file name="FactoryiqOpcUa.node.ts" path="/Users/boris/fiq-n8n/custom-nodes/n8n-nodes-fiq-opcua/nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node.ts">
       <metrics statements="187" coveredstatements="161" conditionals="209" coveredconditionals="134" methods="10" coveredmethods="8"/>

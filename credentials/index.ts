@@ -1,1 +1,1 @@
-export * from './OpcUaCredential.credentials';
+export * from './OpcUaApi.credentials';
