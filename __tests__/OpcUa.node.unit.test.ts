@@ -1,4 +1,4 @@
-import { OpcUa } from "../nodes/FactoryIQ/OpcUa/OpcUa.node";
+import { OpcUa } from "../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node";
 import type { IExecuteFunctions } from "n8n-workflow";
 
 jest.mock("node-opcua", () => ({
@@ -283,7 +283,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     for (const policy of policies) {
       for (const mode of modes) {
         setDefaultNodeOpcuaMock();
-        const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+        const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
         const node = new OpcUa();
         const params = {
           mode: "reader",
@@ -303,7 +303,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("covers default/fallback in security policy and mode switches", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
     const node = new OpcUa();
     const params = {
       mode: "reader",
@@ -349,7 +349,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("handles error in both session.close() and client.disconnect() (writer)", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
     const node = new OpcUa();
     const params = {
       mode: "writer",
@@ -381,7 +381,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("handles error thrown in session.write (writer mode)", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
     const node = new OpcUa();
     const params = {
       mode: "writer",
@@ -412,7 +412,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("handles error thrown in session.call (writer mode)", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
     const node = new OpcUa();
     const params = {
       mode: "writer",
@@ -443,7 +443,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("writer: callMethod with arguments", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
     const node = new OpcUa();
     const params = {
       mode: "writer",
@@ -501,7 +501,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     ];
     for (const dataType of dataTypes) {
       setDefaultNodeOpcuaMock();
-      const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+      const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
       const node = new OpcUa();
       const params = {
         mode: "writer",
@@ -524,7 +524,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("writer: writeVariable with unknown dataType (default branch)", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
     const node = new OpcUa();
     const params = {
       mode: "writer",
@@ -548,7 +548,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("writer: writeVariable with DateTime and invalid date string", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
     const node = new OpcUa();
     const params = {
       mode: "writer",
@@ -572,7 +572,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("writer: writeVariable with ByteString and non-binary string", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/OpcUa.node");
+    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node");
     const node = new OpcUa();
     const params = {
       mode: "writer",

@@ -5,7 +5,7 @@
   "keywords": [
     "n8n-community-node-package"
   ],
-  "license": "SEE LICENSE",
+  "license": "MIT",
   "homepage": "https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua#readme",
   "author": {
     "name": "FactoryIQ",

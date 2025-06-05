@@ -1,1 +1,1 @@
-export * from './OpcUa.node';
+export * from './FactoryiqOpcUa.node';
