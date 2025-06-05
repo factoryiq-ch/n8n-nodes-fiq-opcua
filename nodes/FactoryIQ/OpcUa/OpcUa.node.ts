@@ -1,0 +1,606 @@
+import type {
+	IExecuteFunctions,
+	INodeExecutionData,
+	INodeType,
+	INodeTypeDescription,
+	Icon,
+	IDataObject,
+} from 'n8n-workflow';
+import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import type { FactoryIQNodeOutput } from './FactoryIQNodeOutput';
+
+export class OpcUa implements INodeType {
+	description: INodeTypeDescription = {
+		displayName: 'FactoryIQ OpcUA',
+		name: 'factoryiqOpcUa',
+		group: ['input', 'output'],
+		version: 1,
+		description: 'Read and write data to OPC UA servers (FactoryIQ unified node)',
+		icon: 'file:FactoryIQ.svg' as Icon,
+		defaults: {
+			name: 'OPC UA',
+		},
+		inputs: [NodeConnectionType.Main],
+		outputs: [NodeConnectionType.Main],
+		usableAsTool: true,
+		credentials: [
+			{
+				name: 'opcUaCredential',
+				required: true,
+			},
+		],
+		properties: [
+			{
+				displayName: 'Mode',
+				name: 'mode',
+				type: 'options',
+				options: [
+					{ name: 'Reader', value: 'reader' },
+					{ name: 'Writer', value: 'writer' },
+				],
+				default: 'reader',
+				description: 'Select whether to read or write OPC UA data.',
+			},
+			// Reader properties
+			{
+				displayName: 'Node IDs',
+				name: 'nodeIds',
+				type: 'string',
+				typeOptions: {
+					multipleValues: true,
+					multipleValueButtonText: 'Add NodeId',
+				},
+				default: [],
+				placeholder: 'e.g. ns=1;s=Temperature',
+				description: 'Add one or more OPC UA nodeIds to read. Each nodeId should be entered as a separate entry (e.g., ns=1;s=Temperature).',
+				displayOptions: {
+					show: {
+						mode: ['reader'],
+					},
+				},
+			},
+			// Writer properties
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				options: [
+					{ name: 'Write Variable', value: 'writeVariable' },
+					{ name: 'Call Method', value: 'callMethod' },
+				],
+				default: 'writeVariable',
+				description: 'Choose whether to write to a variable or call a method.',
+				displayOptions: {
+					show: {
+						mode: ['writer'],
+					},
+				},
+			},
+			{
+				displayName: 'Node ID',
+				name: 'nodeId',
+				type: 'string',
+				displayOptions: { show: { mode: ['writer'], operation: ['writeVariable'] } },
+				required: true,
+				description: 'The OPC UA nodeId of the variable to write to.',
+				default: '',
+			},
+			{
+				displayName: 'Value',
+				name: 'value',
+				type: 'string',
+				displayOptions: { show: { mode: ['writer'], operation: ['writeVariable'] } },
+				required: true,
+				description: 'The value to write.',
+				default: '',
+			},
+			{
+				displayName: 'Data Type',
+				name: 'dataType',
+				type: 'options',
+				displayOptions: { show: { mode: ['writer'], operation: ['writeVariable'] } },
+				options: [
+					{ name: 'Boolean', value: 'Boolean' },
+					{ name: 'SByte', value: 'SByte' },
+					{ name: 'Byte', value: 'Byte' },
+					{ name: 'Int16', value: 'Int16' },
+					{ name: 'UInt16', value: 'UInt16' },
+					{ name: 'Int32', value: 'Int32' },
+					{ name: 'UInt32', value: 'UInt32' },
+					{ name: 'Int64', value: 'Int64' },
+					{ name: 'UInt64', value: 'UInt64' },
+					{ name: 'Float', value: 'Float' },
+					{ name: 'Double', value: 'Double' },
+					{ name: 'String', value: 'String' },
+					{ name: 'DateTime', value: 'DateTime' },
+					{ name: 'Guid', value: 'Guid' },
+					{ name: 'ByteString', value: 'ByteString' },
+				],
+				required: true,
+				description: 'The OPC UA data type of the value.',
+				default: 'Boolean',
+			},
+			{
+				displayName: 'Object Node ID',
+				name: 'objectNodeId',
+				type: 'string',
+				displayOptions: { show: { mode: ['writer'], operation: ['callMethod'] } },
+				required: true,
+				description: 'The nodeId of the object containing the method.',
+				default: '',
+			},
+			{
+				displayName: 'Method Node ID',
+				name: 'methodNodeId',
+				type: 'string',
+				displayOptions: { show: { mode: ['writer'], operation: ['callMethod'] } },
+				required: true,
+				description: 'The nodeId of the method to call.',
+				default: '',
+			},
+			{
+				displayName: 'Parameters',
+				name: 'parameters',
+				type: 'fixedCollection',
+				displayOptions: { show: { mode: ['writer'], operation: ['callMethod'] } },
+				required: false,
+				description: 'Optional. Add input arguments for the method call. Leave empty for methods with no input arguments.',
+				default: {},
+				options: [
+					{
+						name: 'arguments',
+						displayName: 'Arguments',
+						values: [
+							{
+								name: 'argument',
+								displayName: 'Argument',
+								type: 'collection',
+								placeholder: 'Add Argument',
+								default: {},
+								options: [
+									{
+										displayName: 'Data Type',
+										name: 'dataType',
+										type: 'options',
+										options: [
+											{ name: 'Boolean', value: 'Boolean' },
+											{ name: 'SByte', value: 'SByte' },
+											{ name: 'Byte', value: 'Byte' },
+											{ name: 'Int16', value: 'Int16' },
+											{ name: 'UInt16', value: 'UInt16' },
+											{ name: 'Int32', value: 'Int32' },
+											{ name: 'UInt32', value: 'UInt32' },
+											{ name: 'Int64', value: 'Int64' },
+											{ name: 'UInt64', value: 'UInt64' },
+											{ name: 'Float', value: 'Float' },
+											{ name: 'Double', value: 'Double' },
+											{ name: 'String', value: 'String' },
+											{ name: 'DateTime', value: 'DateTime' },
+											{ name: 'Guid', value: 'Guid' },
+											{ name: 'ByteString', value: 'ByteString' },
+										],
+										default: 'String',
+										description: 'The OPC UA data type of the argument.',
+									},
+									{
+										displayName: 'Value',
+										name: 'value',
+										type: 'string',
+										default: '',
+										description: 'The value for this argument.',
+									},
+								],
+							},
+						],
+					},
+				],
+			},
+		],
+	};
+
+	private static getDataTypeEnum(dataType: string, DataType: any): number {
+		switch (dataType) {
+			case 'Boolean': return DataType.Boolean;
+			case 'SByte': return DataType.SByte;
+			case 'Byte': return DataType.Byte;
+			case 'Int16': return DataType.Int16;
+			case 'UInt16': return DataType.UInt16;
+			case 'Int32': return DataType.Int32;
+			case 'UInt32': return DataType.UInt32;
+			case 'Int64': return DataType.Int64;
+			case 'UInt64': return DataType.UInt64;
+			case 'Float': return DataType.Float;
+			case 'Double': return DataType.Double;
+			case 'String': return DataType.String;
+			case 'DateTime': return DataType.DateTime;
+			case 'Guid': return DataType.Guid;
+			case 'ByteString': return DataType.ByteString;
+			default: return DataType.String;
+		}
+	}
+
+	private static convertValueToDataType(value: string, dataType: string): any {
+		switch (dataType) {
+			case 'Boolean':
+				return value.toString().toLowerCase() === 'true' || value === '1' || value.toString().toLowerCase() === 'on' || value.toString().toLowerCase() === 'yes';
+			case 'SByte':
+				return Math.max(-128, Math.min(127, parseInt(value) || 0));
+			case 'Byte':
+				return Math.max(0, Math.min(255, parseInt(value) || 0));
+			case 'Int16':
+				return Math.max(-32768, Math.min(32767, parseInt(value) || 0));
+			case 'UInt16':
+				return Math.max(0, Math.min(65535, parseInt(value) || 0));
+			case 'Int32':
+				return Math.max(-2147483648, Math.min(2147483647, parseInt(value) || 0));
+			case 'UInt32':
+				return Math.max(0, Math.min(4294967295, parseInt(value) || 0));
+			case 'Int64':
+				return parseInt(value) || 0;
+			case 'UInt64':
+				return Math.max(0, parseInt(value) || 0);
+			case 'Float':
+				return parseFloat(value) || 0.0;
+			case 'Double':
+				return parseFloat(value) || 0.0;
+			case 'String':
+				return value.toString();
+			case 'DateTime':
+				return new Date(value);
+			case 'Guid':
+				return value.toString();
+			case 'ByteString':
+				return Buffer.from(value);
+			default:
+				return value.toString();
+		}
+	}
+
+	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+		const items = this.getInputData();
+		const results: INodeExecutionData[] = [];
+		const mode = this.getNodeParameter('mode', 0) as string;
+
+		if (mode === 'reader') {
+			const nodeIdsRaw = this.getNodeParameter('nodeIds', 0, []) as string[] | string;
+			const nodeIds = Array.isArray(nodeIdsRaw) ? nodeIdsRaw : [nodeIdsRaw];
+			if (!Array.isArray(nodeIds) || nodeIds.length === 0 || !nodeIds[0]) {
+				throw new NodeOperationError(this.getNode(), 'At least one Node ID must be provided for reading.');
+			}
+			const credentials = await this.getCredentials('opcUaCredential');
+
+			if (!credentials) {
+				throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
+			}
+
+			const {
+				OPCUAClient,
+				SecurityPolicy,
+				MessageSecurityMode,
+				UserTokenType,
+			} = await import('node-opcua');
+
+			const endpointUrl = credentials.endpointUrl as string;
+			const securityPolicy = (credentials.securityPolicy as string) || 'None';
+			const securityMode = (credentials.securityMode as string) || 'None';
+			const authenticationType = (credentials.authenticationType as string) || 'anonymous';
+
+			let securityPolicyEnum;
+			let securityModeEnum;
+
+			switch (securityPolicy) {
+				case 'Basic256Sha256':
+					securityPolicyEnum = SecurityPolicy.Basic256Sha256;
+					break;
+				case 'Basic256':
+					securityPolicyEnum = SecurityPolicy.Basic256;
+					break;
+				case 'Basic128Rsa15':
+					securityPolicyEnum = SecurityPolicy.Basic128Rsa15;
+					break;
+				case 'Aes128_Sha256_RsaOaep':
+					securityPolicyEnum = SecurityPolicy.Aes128_Sha256_RsaOaep;
+					break;
+				case 'Aes256_Sha256_RsaPss':
+					securityPolicyEnum = SecurityPolicy.Aes256_Sha256_RsaPss;
+					break;
+				default:
+					securityPolicyEnum = SecurityPolicy.None;
+			}
+
+			switch (securityMode) {
+				case 'Sign':
+					securityModeEnum = MessageSecurityMode.Sign;
+					break;
+				case 'SignAndEncrypt':
+				case 'Sign & Encrypt':
+					securityModeEnum = MessageSecurityMode.SignAndEncrypt;
+					break;
+				default:
+					securityModeEnum = MessageSecurityMode.None;
+			}
+
+			const clientOptions: any = {
+				securityPolicy: securityPolicyEnum,
+				securityMode: securityModeEnum,
+				connectionStrategy: {
+					initialDelay: 1000,
+					maxRetry: 3,
+					maxDelay: 10000,
+				},
+				clientName: 'n8n-opcua-unified',
+				requestedSessionTimeout: 60000,
+				endpointMustExist: false,
+				securityOptions: {
+					rejectUnauthorized: false
+				}
+			};
+
+			if (authenticationType === 'x509') {
+				if (credentials.certificate && credentials.privateKey) {
+					clientOptions.certificateData = Buffer.from(credentials.certificate as string);
+					clientOptions.privateKeyData = Buffer.from(credentials.privateKey as string);
+				} else {
+					throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
+				}
+			}
+
+			const client = OPCUAClient.create(clientOptions);
+			let session;
+
+			try {
+				await client.connect(endpointUrl);
+				let userIdentity: any;
+				if (authenticationType === 'usernamePassword') {
+					userIdentity = {
+						type: UserTokenType.UserName,
+						userName: credentials.username,
+						password: credentials.password,
+					};
+				} else if (authenticationType === 'x509') {
+					userIdentity = {
+						type: UserTokenType.Certificate,
+						certificateData: credentials.certificate,
+						privateKey: credentials.privateKey,
+					};
+				} else {
+					userIdentity = undefined;
+				}
+				session = await client.createSession(userIdentity);
+			} catch (error) {
+				await client.disconnect().catch(() => {});
+				throw new NodeOperationError(this.getNode(), error, { message: 'Failed to connect or authenticate to OPC UA server.' });
+			}
+
+			try {
+				const readResults = await session.readVariableValue(nodeIds);
+				for (let i = 0; i < nodeIds.length; i++) {
+					const nodeId = nodeIds[i];
+					const result = readResults[i];
+					if (result.statusCode && result.statusCode.name !== 'Good') {
+						const output: FactoryIQNodeOutput = {
+							timestamp: Date.now(),
+							source: 'OpcUaUnified',
+							protocol: 'opcua',
+							address: nodeId,
+							metrics: { [nodeId]: null },
+							status: result.statusCode.name,
+							meta: { error: result.statusCode.name },
+						};
+						results.push({ json: output as unknown as IDataObject });
+					} else {
+						const output: FactoryIQNodeOutput = {
+							timestamp: Date.now(),
+							source: 'OpcUaUnified',
+							protocol: 'opcua',
+							address: nodeId,
+							metrics: { [nodeId]: result.value ? result.value.value : null },
+							status: 'Good',
+							meta: { dataType: result.value ? result.value.dataType : null },
+						};
+						results.push({ json: output as unknown as IDataObject });
+					}
+				}
+			} catch (error) {
+				throw new NodeOperationError(this.getNode(), error, { message: 'Failed to read node values.' });
+			} finally {
+				try {
+					if (session) {
+						await session.close();
+					}
+					await client.disconnect();
+				} catch (error) {}
+			}
+			return [results];
+		} else if (mode === 'writer') {
+			for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+				const operation = this.getNodeParameter('operation', itemIndex) as string;
+
+				// Parameter validation BEFORE any OPC UA connection
+				if (operation === 'writeVariable') {
+					const nodeId = this.getNodeParameter('nodeId', itemIndex) as string;
+					const dataType = this.getNodeParameter('dataType', itemIndex) as string;
+					if (!nodeId || !dataType) {
+						throw new NodeOperationError(this.getNode(), 'Node ID and Data Type are required for variable write.');
+					}
+				} else if (operation === 'callMethod') {
+					// No required params for callMethod at this stage
+				} else {
+					throw new NodeOperationError(this.getNode(), 'Unsupported operation type.');
+				}
+
+				const credentials = await this.getCredentials('opcUaCredential');
+
+				if (!credentials) {
+					throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
+				}
+
+				const { OPCUAClient, SecurityPolicy, MessageSecurityMode, UserTokenType, DataType } = await import('node-opcua');
+
+				const endpointUrl = credentials.endpointUrl as string;
+				const securityPolicy = (credentials.securityPolicy as string) || 'None';
+				const securityMode = (credentials.securityMode as string) || 'None';
+				const authenticationType = (credentials.authenticationType as string) || 'anonymous';
+
+				let securityPolicyEnum;
+				let securityModeEnum;
+
+				switch (securityPolicy) {
+					case 'Basic256Sha256':
+						securityPolicyEnum = SecurityPolicy.Basic256Sha256;
+						break;
+					case 'Basic256':
+						securityPolicyEnum = SecurityPolicy.Basic256;
+						break;
+					case 'Basic128Rsa15':
+						securityPolicyEnum = SecurityPolicy.Basic128Rsa15;
+						break;
+					case 'Aes128_Sha256_RsaOaep':
+						securityPolicyEnum = SecurityPolicy.Aes128_Sha256_RsaOaep;
+						break;
+					case 'Aes256_Sha256_RsaPss':
+						securityPolicyEnum = SecurityPolicy.Aes256_Sha256_RsaPss;
+						break;
+					default:
+						securityPolicyEnum = SecurityPolicy.None;
+				}
+
+				switch (securityMode) {
+					case 'Sign':
+						securityModeEnum = MessageSecurityMode.Sign;
+						break;
+					case 'SignAndEncrypt':
+					case 'Sign & Encrypt':
+						securityModeEnum = MessageSecurityMode.SignAndEncrypt;
+						break;
+					default:
+						securityModeEnum = MessageSecurityMode.None;
+				}
+
+				const clientOptions: any = {
+					securityPolicy: securityPolicyEnum,
+					securityMode: securityModeEnum,
+					connectionStrategy: {
+						initialDelay: 1000,
+						maxRetry: 3,
+						maxDelay: 10000,
+					},
+					clientName: 'n8n-opcua-unified',
+					requestedSessionTimeout: 60000,
+					endpointMustExist: false,
+					securityOptions: {
+						rejectUnauthorized: false
+					}
+				};
+
+				if (authenticationType === 'x509') {
+					if (credentials.certificate && credentials.privateKey) {
+						clientOptions.certificateData = Buffer.from(credentials.certificate as string);
+						clientOptions.privateKeyData = Buffer.from(credentials.privateKey as string);
+					} else {
+						throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
+					}
+				}
+
+				const client = OPCUAClient.create(clientOptions);
+				let session;
+
+				try {
+					await client.connect(endpointUrl);
+					let userIdentity: any;
+					if (authenticationType === 'usernamePassword') {
+						userIdentity = {
+							type: UserTokenType.UserName,
+							userName: credentials.username,
+							password: credentials.password,
+						};
+					} else if (authenticationType === 'x509') {
+						userIdentity = {
+							type: UserTokenType.Certificate,
+							certificateData: credentials.certificate,
+							privateKey: credentials.privateKey,
+						};
+					} else {
+						userIdentity = undefined;
+					}
+					session = await client.createSession(userIdentity);
+				} catch (error) {
+					await client.disconnect().catch(() => {});
+					throw new NodeOperationError(this.getNode(), error, { message: 'Failed to connect or authenticate to OPC UA server.' });
+				}
+
+				try {
+					if (operation === 'writeVariable') {
+						const nodeId = this.getNodeParameter('nodeId', itemIndex) as string;
+						const value = this.getNodeParameter('value', itemIndex) as string;
+						const dataType = this.getNodeParameter('dataType', itemIndex) as string;
+						const dataTypeEnum = OpcUa.getDataTypeEnum(dataType, DataType);
+						const writeValue = OpcUa.convertValueToDataType(value, dataType);
+						const nodesToWrite = [{
+							nodeId,
+							attributeId: (await import('node-opcua')).AttributeIds.Value,
+							value: {
+								value: { dataType: dataTypeEnum, value: writeValue },
+							},
+						}];
+						const operationResult = await session.write(nodesToWrite);
+						const output: FactoryIQNodeOutput = {
+							timestamp: Date.now(),
+							source: 'OpcUaUnified',
+							protocol: 'opcua',
+							address: nodeId,
+							metrics: { [nodeId]: writeValue },
+							status: (operationResult[0]?.name || operationResult[0]?.toString()) === 'Good' ? 'ok' : 'error',
+							meta: { dataType, operationType: 'variable_write', statusCode: operationResult[0]?.name || operationResult[0]?.toString() },
+						};
+						results.push({ json: output as unknown as IDataObject });
+					} else if (operation === 'callMethod') {
+						const objectNodeId = this.getNodeParameter('objectNodeId', itemIndex) as string;
+						const methodNodeId = this.getNodeParameter('methodNodeId', itemIndex) as string;
+						const parametersRaw = this.getNodeParameter('parameters', itemIndex, {});
+						let inputArguments: any[] = [];
+						if (
+							parametersRaw &&
+							typeof parametersRaw === 'object' &&
+							'arguments' in parametersRaw &&
+							Array.isArray((parametersRaw as any).arguments)
+						) {
+							inputArguments = (parametersRaw as any).arguments.map((arg: any) => ({
+								dataType: arg.dataType,
+								value: arg.value,
+							}));
+						}
+						const methodCall = [{
+							objectId: objectNodeId,
+							methodId: methodNodeId,
+							inputArguments,
+						}];
+						const operationResult = await session.call(methodCall);
+						const output: FactoryIQNodeOutput = {
+							timestamp: Date.now(),
+							source: 'OpcUaUnified',
+							protocol: 'opcua',
+							address: methodNodeId,
+							metrics: { outputArguments: operationResult[0]?.outputArguments || [] },
+							status: (operationResult[0]?.statusCode?.name || operationResult[0]?.statusCode?.toString()) === 'Good' ? 'ok' : 'error',
+							meta: { inputArguments, operationType: 'method_call', statusCode: operationResult[0]?.statusCode?.name || operationResult[0]?.statusCode?.toString() },
+						};
+						results.push({ json: output as unknown as IDataObject });
+					}
+				} catch (error) {
+					throw new NodeOperationError(this.getNode(), error, { message: 'Failed to execute operation on OPC UA node.' });
+				} finally {
+					try {
+						if (session) {
+							await session.close();
+						}
+						await client.disconnect();
+					} catch (error) {}
+				}
+			}
+			return [results];
+		} else {
+			throw new NodeOperationError(this.getNode(), 'Invalid mode selected.');
+		}
+	}
+}
