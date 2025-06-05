@@ -1,3 +1,6 @@
+[![CI](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/actions/workflows/ci.yml/badge.svg)](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/factoryiq-ch/n8n-nodes-fiq-opcua/branch/main/graph/badge.svg)](https://codecov.io/gh/factoryiq-ch/n8n-nodes-fiq-opcua)
+
 <p align="center">
   <img src="icons/FactoryIQ.svg" alt="FactoryIQ Logo" width="200"/>
 </p>
