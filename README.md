@@ -5,10 +5,6 @@
   <img src="icons/FactoryIQ.svg" alt="FactoryIQ Logo" width="200"/>
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/coverage-80%25-brightgreen" alt="Test Coverage"/>
-</p>
-
 # n8n-nodes-fiq-opcua
 
 **FactoryIQ OPC UA Node for n8n**
