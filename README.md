@@ -58,15 +58,16 @@ This n8n community node allows you to connect to OPC UA servers to read and writ
 
 ## Compatibility
 
-| Software | Supported/Tested Versions                |
-|----------|-----------------------------------------|
-| n8n      | 1.95.0, 1.95.1, 1.95.2, 1.95.3          |
-| Node.js  | 18.17.0 (min), 20.x (LTS), 22.x (LTS)   |
+| Package         | Version    | Link                                                      |
+|----------------|------------|-----------------------------------------------------------|
+| n8n            | 1.95.3     | [npm](https://www.npmjs.com/package/n8n)                  |
+| n8n-workflow   | 1.82.0     | [npm](https://www.npmjs.com/package/n8n-workflow)         |
+| Node.js        | 18.17.0    | [nodejs.org](https://nodejs.org/)                         |
+| Node.js (LTS)  | 20.14.0    | [nodejs.org](https://nodejs.org/)                         |
+| Node.js (LTS)  | 22.16.0    | [nodejs.org](https://nodejs.org/)                         |
 
-- These versions are actively tested in CI. Other Node.js 18.x versions above 18.17.0 may work but are not continuously tested.
-- See `.nvmrc` for the recommended Node.js version.
-- This node is tested and supported on Node.js LTS releases. Using other versions may result in unexpected behavior.
-- No known incompatibilities.
+- This node is tested and supported on the above versions.
+- Using other versions may result in unexpected behavior.
 
 ---
 
