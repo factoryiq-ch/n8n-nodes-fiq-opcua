@@ -40,7 +40,7 @@
       "dist/credentials/OpcUaCredential.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/FactoryIQ/OpcUa/OpcUa.node.js"
+      "dist/nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node.js"
     ]
   },
   "devDependencies": {

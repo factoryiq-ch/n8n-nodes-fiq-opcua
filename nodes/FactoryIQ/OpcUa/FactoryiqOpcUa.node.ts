@@ -9,7 +9,7 @@ import type {
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import type { FactoryIQNodeOutput } from './FactoryIQNodeOutput';
 
-export class OpcUa implements INodeType {
+export class FactoryiqOpcUa implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'FactoryIQ OpcUA',
 		name: 'factoryiqOpcUa',
@@ -31,17 +31,17 @@ export class OpcUa implements INodeType {
 		],
 		properties: [
 			{
-				displayName: 'Mode',
-				name: 'mode',
+				displayName: 'Action',
+				name: 'operation',
 				type: 'options',
 				options: [
-					{ name: 'Reader', value: 'reader' },
-					{ name: 'Writer', value: 'writer' },
+					{ name: 'Read', value: 'read' },
+					{ name: 'Write', value: 'write' },
 				],
-				default: 'reader',
-				description: 'Select whether to read or write OPC UA data',
+				default: 'read',
+				description: 'Choose whether to read or write OPC UA data',
+				noDataExpression: true,
 			},
-			// Reader properties
 			{
 				displayName: 'Node IDs',
 				name: 'nodeIds',
@@ -55,14 +55,13 @@ export class OpcUa implements INodeType {
 				description: 'Add one or more OPC UA nodeIds to read. Each nodeId should be entered as a separate entry (e.g., ns=1;s=Temperature).',
 				displayOptions: {
 					show: {
-						mode: ['reader'],
+						operation: ['read'],
 					},
 				},
 			},
-			// Writer properties
 			{
-				displayName: 'Operation',
-				name: 'operation',
+				displayName: 'Write Operation',
+				name: 'writeOperation',
 				type: 'options',
 				options: [
 					{ name: 'Write Variable', value: 'writeVariable' },
@@ -72,7 +71,7 @@ export class OpcUa implements INodeType {
 				description: 'Choose whether to write to a variable or call a method',
 				displayOptions: {
 					show: {
-						mode: ['writer'],
+						operation: ['write'],
 					},
 				},
 				noDataExpression: true,
@@ -81,7 +80,7 @@ export class OpcUa implements INodeType {
 				displayName: 'Node ID',
 				name: 'nodeId',
 				type: 'string',
-				displayOptions: { show: { mode: ['writer'], operation: ['writeVariable'] } },
+				displayOptions: { show: { operation: ['write'], writeOperation: ['writeVariable'] } },
 				required: true,
 				description: 'The OPC UA nodeId of the variable to write to',
 				default: '',
@@ -90,7 +89,7 @@ export class OpcUa implements INodeType {
 				displayName: 'Value',
 				name: 'value',
 				type: 'string',
-				displayOptions: { show: { mode: ['writer'], operation: ['writeVariable'] } },
+				displayOptions: { show: { operation: ['write'], writeOperation: ['writeVariable'] } },
 				required: true,
 				description: 'The value to write',
 				default: '',
@@ -99,7 +98,7 @@ export class OpcUa implements INodeType {
 				displayName: 'Data Type',
 				name: 'dataType',
 				type: 'options',
-				displayOptions: { show: { mode: ['writer'], operation: ['writeVariable'] } },
+				displayOptions: { show: { operation: ['write'], writeOperation: ['writeVariable'] } },
 				options: [
 					{ name: 'Boolean', value: 'Boolean' },
 					{ name: 'Byte', value: 'Byte' },
@@ -125,7 +124,7 @@ export class OpcUa implements INodeType {
 				displayName: 'Object Node ID',
 				name: 'objectNodeId',
 				type: 'string',
-				displayOptions: { show: { mode: ['writer'], operation: ['callMethod'] } },
+				displayOptions: { show: { operation: ['write'], writeOperation: ['callMethod'] } },
 				required: true,
 				description: 'The nodeId of the object containing the method',
 				default: '',
@@ -134,7 +133,7 @@ export class OpcUa implements INodeType {
 				displayName: 'Method Node ID',
 				name: 'methodNodeId',
 				type: 'string',
-				displayOptions: { show: { mode: ['writer'], operation: ['callMethod'] } },
+				displayOptions: { show: { operation: ['write'], writeOperation: ['callMethod'] } },
 				required: true,
 				description: 'The nodeId of the method to call',
 				default: '',
@@ -143,7 +142,7 @@ export class OpcUa implements INodeType {
 				displayName: 'Parameters',
 				name: 'parameters',
 				type: 'fixedCollection',
-				displayOptions: { show: { mode: ['writer'], operation: ['callMethod'] } },
+				displayOptions: { show: { operation: ['write'], writeOperation: ['callMethod'] } },
 				description: 'Optional. Add input arguments for the method call. Leave empty for methods with no input arguments.',
 				default: {},
 				options: [
@@ -253,18 +252,21 @@ export class OpcUa implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const results: INodeExecutionData[] = [];
-		const mode = this.getNodeParameter('mode', 0) as string;
+		const operation = this.getNodeParameter('operation', 0) as string;
 
-		if (mode === 'reader') {
+		if (operation === 'read') {
 			const nodeIdsRaw = this.getNodeParameter('nodeIds', 0, []) as string[] | string;
 			const nodeIds = Array.isArray(nodeIdsRaw) ? nodeIdsRaw : [nodeIdsRaw];
 			if (!Array.isArray(nodeIds) || nodeIds.length === 0 || !nodeIds[0]) {
 				throw new NodeOperationError(this.getNode(), 'At least one Node ID must be provided for reading.');
 			}
 			const credentials = await this.getCredentials('opcUaApi');
-
 			if (!credentials) {
 				throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
+			}
+			const authenticationType = (credentials.authenticationType as string) || 'anonymous';
+			if (authenticationType === 'x509' && (!credentials.certificate || !credentials.privateKey)) {
+				throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 			}
 
 			const {
@@ -277,7 +279,6 @@ export class OpcUa implements INodeType {
 			const endpointUrl = credentials.endpointUrl as string;
 			const securityPolicy = (credentials.securityPolicy as string) || 'None';
 			const securityMode = (credentials.securityMode as string) || 'None';
-			const authenticationType = (credentials.authenticationType as string) || 'anonymous';
 
 			let securityPolicyEnum;
 			let securityModeEnum;
@@ -406,35 +407,35 @@ export class OpcUa implements INodeType {
 				} catch (error) {}
 			}
 			return [results];
-		} else if (mode === 'writer') {
+		} else if (operation === 'write') {
 			for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-				const operation = this.getNodeParameter('operation', itemIndex) as string;
-
-				// Parameter validation BEFORE any OPC UA connection
-				if (operation === 'writeVariable') {
+				const writeOperation = this.getNodeParameter('writeOperation', itemIndex) as string | undefined;
+				if (!writeOperation) {
+					throw new NodeOperationError(this.getNode(), 'Write operation must be specified.');
+				}
+				if (writeOperation === 'writeVariable') {
 					const nodeId = this.getNodeParameter('nodeId', itemIndex) as string;
 					const dataType = this.getNodeParameter('dataType', itemIndex) as string;
 					if (!nodeId || !dataType) {
 						throw new NodeOperationError(this.getNode(), 'Node ID and Data Type are required for variable write.');
 					}
-				} else if (operation === 'callMethod') {
+				} else if (writeOperation === 'callMethod') {
 					// No required params for callMethod at this stage
 				} else {
 					throw new NodeOperationError(this.getNode(), 'Unsupported operation type.');
 				}
-
 				const credentials = await this.getCredentials('opcUaApi');
-
 				if (!credentials) {
 					throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
 				}
-
+				const authenticationType = (credentials.authenticationType as string) || 'anonymous';
+				if (authenticationType === 'x509' && (!credentials.certificate || !credentials.privateKey)) {
+					throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
+				}
 				const { OPCUAClient, SecurityPolicy, MessageSecurityMode, UserTokenType, DataType } = await import('node-opcua');
-
 				const endpointUrl = credentials.endpointUrl as string;
 				const securityPolicy = (credentials.securityPolicy as string) || 'None';
 				const securityMode = (credentials.securityMode as string) || 'None';
-				const authenticationType = (credentials.authenticationType as string) || 'anonymous';
 
 				let securityPolicyEnum;
 				let securityModeEnum;
@@ -498,7 +499,6 @@ export class OpcUa implements INodeType {
 
 				const client = OPCUAClient.create(clientOptions);
 				let session;
-
 				try {
 					await client.connect(endpointUrl);
 					let userIdentity: any;
@@ -524,12 +524,12 @@ export class OpcUa implements INodeType {
 				}
 
 				try {
-					if (operation === 'writeVariable') {
+					if (writeOperation === 'writeVariable') {
 						const nodeId = this.getNodeParameter('nodeId', itemIndex) as string;
 						const value = this.getNodeParameter('value', itemIndex) as string;
 						const dataType = this.getNodeParameter('dataType', itemIndex) as string;
-						const dataTypeEnum = OpcUa.getDataTypeEnum(dataType, DataType);
-						const writeValue = OpcUa.convertValueToDataType(value, dataType);
+						const dataTypeEnum = FactoryiqOpcUa.getDataTypeEnum(dataType, DataType);
+						const writeValue = FactoryiqOpcUa.convertValueToDataType(value, dataType);
 						const nodesToWrite = [{
 							nodeId,
 							attributeId: (await import('node-opcua')).AttributeIds.Value,
@@ -548,7 +548,7 @@ export class OpcUa implements INodeType {
 							meta: { dataType, operationType: 'variable_write', statusCode: operationResult[0]?.name || operationResult[0]?.toString() },
 						};
 						results.push({ json: output as unknown as IDataObject });
-					} else if (operation === 'callMethod') {
+					} else if (writeOperation === 'callMethod') {
 						const objectNodeId = this.getNodeParameter('objectNodeId', itemIndex) as string;
 						const methodNodeId = this.getNodeParameter('methodNodeId', itemIndex) as string;
 						const parametersRaw = this.getNodeParameter('parameters', itemIndex, {});
@@ -580,6 +580,8 @@ export class OpcUa implements INodeType {
 							meta: { inputArguments, operationType: 'method_call', statusCode: operationResult[0]?.statusCode?.name || operationResult[0]?.statusCode?.toString() },
 						};
 						results.push({ json: output as unknown as IDataObject });
+					} else {
+						throw new NodeOperationError(this.getNode(), 'Unsupported operation type.');
 					}
 				} catch (error) {
 					throw new NodeOperationError(this.getNode(), error, { message: 'Failed to execute operation on OPC UA node.' });
@@ -594,7 +596,9 @@ export class OpcUa implements INodeType {
 			}
 			return [results];
 		} else {
-			throw new NodeOperationError(this.getNode(), 'Invalid mode selected.');
+			throw new NodeOperationError(this.getNode(), 'Invalid operation selected.');
 		}
 	}
 }
+
+export default FactoryiqOpcUa;

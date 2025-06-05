@@ -1,4 +1,4 @@
-import { OpcUa } from "../nodes/FactoryIQ/OpcUa";
+import { FactoryiqOpcUa } from "../nodes/FactoryIQ/OpcUa";
 import type { IExecuteFunctions } from "n8n-workflow";
 
 jest.mock("node-opcua", () => ({
@@ -24,10 +24,15 @@ jest.mock("node-opcua", () => ({
 }));
 
 function createMockContext(params: Record<string, any>, credentials: any): IExecuteFunctions {
-  // If writer mode, return a dummy input item so the for loop runs
-  const isWriter = params.mode === 'writer';
+  const isWriter = params.operation === 'write';
   return {
-    getNodeParameter: (name: string, itemIndex: number, fallback?: any) => params[name] ?? fallback,
+    getNodeParameter: (name: string, itemIndex: number, fallback?: any) => {
+      if (params[name] !== undefined) return params[name];
+      if (name === 'writeOperation' && isWriter) return params.writeOperation || 'writeVariable';
+      if (name === 'operation') return params.operation;
+      if (name === 'nodeIds' && params.operation === 'read') return params.nodeIds || [];
+      return fallback;
+    },
     getCredentials: async (name: string) => credentials,
     getInputData: () => isWriter ? [{}] : [],
     getNode: () => ({} as any),
@@ -69,9 +74,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("returns correct output in Reader mode", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: ["ns=1;s=TestVariable"],
     };
     const credentials = {
@@ -88,10 +93,10 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("returns correct output in Writer mode (writeVariable)", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "writeVariable",
+      operation: "write",
+      writeOperation: "writeVariable",
       nodeId: "ns=1;s=WritableVariable",
       value: "123.45",
       dataType: "Double",
@@ -110,10 +115,10 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("returns correct output in Writer mode (callMethod)", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "callMethod",
+      operation: "write",
+      writeOperation: "callMethod",
       objectNodeId: "ns=1;s=Objects",
       methodNodeId: "ns=1;s=TestMethod",
       parameters: {},
@@ -139,9 +144,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       disconnect: jest.fn().mockResolvedValue(undefined),
     }));
 
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: ["ns=1;s=TestVariable"],
     };
     const credentials = {
@@ -156,9 +161,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("throws if credentials are missing", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: ["ns=1;s=TestVariable"],
     };
     const context = createMockContext(params, null);
@@ -166,9 +171,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("throws on invalid mode", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "invalidMode",
+      operation: "invalidMode",
       nodeIds: ["ns=1;s=TestVariable"],
     };
     const credentials = {
@@ -178,14 +183,14 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     const context = createMockContext(params, credentials);
-    await expect(node.execute.call(context)).rejects.toThrow("Invalid mode selected.");
+    await expect(node.execute.call(context)).rejects.toThrow("Invalid operation selected.");
   });
 
   it("throws on invalid operation in writer mode", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "notARealOperation",
+      operation: "write",
+      writeOperation: "notARealOperation",
       nodeId: "ns=1;s=WritableVariable",
       value: "123.45",
       dataType: "Double",
@@ -201,9 +206,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("throws on reader mode with empty nodeIds", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: [],
     };
     const credentials = {
@@ -217,13 +222,13 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("throws in writer mode with missing nodeId or dataType", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "writeVariable",
-      // nodeId missing
-      value: "123.45",
-      // dataType missing
+      operation: "write",
+      writeOperation: "writeVariable",
+      nodeId: "",
+      value: "",
+      dataType: "",
     };
     const credentials = {
       endpointUrl: "opc.tcp://localhost:4840",
@@ -236,10 +241,13 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("throws in x509 auth if certificate or privateKey is missing (reader)", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: ["ns=1;s=TestVariable"],
+      authenticationType: "x509",
+      certificate: "",
+      privateKey: "",
     };
     const credentials = {
       endpointUrl: "opc.tcp://localhost:4840",
@@ -254,13 +262,16 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("throws in x509 auth if certificate or privateKey is missing (writer)", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "writeVariable",
+      operation: "write",
+      writeOperation: "writeVariable",
       nodeId: "ns=1;s=WritableVariable",
       value: "1",
-      dataType: "Boolean",
+      dataType: "Double",
+      authenticationType: "x509",
+      certificate: "",
+      privateKey: "",
     };
     const credentials = {
       endpointUrl: "opc.tcp://localhost:4840",
@@ -283,10 +294,10 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     for (const policy of policies) {
       for (const mode of modes) {
         setDefaultNodeOpcuaMock();
-        const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-        const node = new OpcUa();
+        const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+        const node = new FactoryiqOpcUa();
         const params = {
-          mode: "reader",
+          operation: "read",
           nodeIds: ["ns=1;s=TestVariable"],
         };
         const credentials = {
@@ -303,10 +314,10 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("covers default/fallback in security policy and mode switches", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new OpcUa();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: ["ns=1;s=TestVariable"],
     };
     const credentials = {
@@ -320,9 +331,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("handles error in session.close() and client.disconnect() (reader)", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: ["ns=1;s=TestVariable"],
     };
     const credentials = {
@@ -349,11 +360,11 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("handles error in both session.close() and client.disconnect() (writer)", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new OpcUa();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "writeVariable",
+      operation: "write",
+      writeOperation: "writeVariable",
       nodeId: "ns=1;s=WritableVariable",
       value: "1",
       dataType: "Double",
@@ -381,11 +392,11 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("handles error thrown in session.write (writer mode)", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new OpcUa();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "writeVariable",
+      operation: "write",
+      writeOperation: "writeVariable",
       nodeId: "ns=1;s=WritableVariable",
       value: "1",
       dataType: "Double",
@@ -412,11 +423,11 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("handles error thrown in session.call (writer mode)", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new OpcUa();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "callMethod",
+      operation: "write",
+      writeOperation: "callMethod",
       objectNodeId: "ns=1;s=Objects",
       methodNodeId: "ns=1;s=TestMethod",
       parameters: {},
@@ -443,11 +454,11 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("writer: callMethod with arguments", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new OpcUa();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "callMethod",
+      operation: "write",
+      writeOperation: "callMethod",
       objectNodeId: "ns=1;s=Objects",
       methodNodeId: "ns=1;s=TestMethod",
       parameters: { arguments: [{ dataType: "String", value: "foo" }] },
@@ -465,9 +476,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("reader: bad status code", async () => {
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: ["ns=1;s=BadNode"],
     };
     const credentials = {
@@ -501,11 +512,11 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     ];
     for (const dataType of dataTypes) {
       setDefaultNodeOpcuaMock();
-      const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-      const node = new OpcUa();
+      const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+      const node = new FactoryiqOpcUa();
       const params = {
-        mode: "writer",
-        operation: "writeVariable",
+        operation: "write",
+        writeOperation: "writeVariable",
         nodeId: "ns=1;s=WritableVariable",
         value: dataType === "Boolean" ? "true" : dataType === "String" ? "test" : "1",
         dataType,
@@ -524,11 +535,11 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("writer: writeVariable with unknown dataType (default branch)", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new OpcUa();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "writeVariable",
+      operation: "write",
+      writeOperation: "writeVariable",
       nodeId: "ns=1;s=WritableVariable",
       value: "foobar",
       dataType: "UnknownType",
@@ -548,11 +559,11 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("writer: writeVariable with DateTime and invalid date string", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new OpcUa();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "writeVariable",
+      operation: "write",
+      writeOperation: "writeVariable",
       nodeId: "ns=1;s=WritableVariable",
       value: "not-a-date",
       dataType: "DateTime",
@@ -572,11 +583,11 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("writer: writeVariable with ByteString and non-binary string", async () => {
     setDefaultNodeOpcuaMock();
-    const { OpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new OpcUa();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "writer",
-      operation: "writeVariable",
+      operation: "write",
+      writeOperation: "writeVariable",
       nodeId: "ns=1;s=WritableVariable",
       value: "not-binary",
       dataType: "ByteString",
@@ -607,9 +618,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
         close: jest.fn().mockResolvedValue(undefined),
       }),
     }));
-    const node = new OpcUa();
+    const node = new FactoryiqOpcUa();
     const params = {
-      mode: "reader",
+      operation: "read",
       nodeIds: ["ns=1;s=TestVariable"],
     };
     const credentials = {
