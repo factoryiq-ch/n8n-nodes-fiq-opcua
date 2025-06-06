@@ -10,6 +10,9 @@ jest.mock("node-opcua", () => ({
         readVariableValue: jest.fn().mockResolvedValue([
           { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
         ]),
+        read: jest.fn().mockResolvedValue([
+          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
+        ]),
         write: jest.fn().mockResolvedValue([{ name: "Good" }]),
         call: jest.fn().mockResolvedValue([{ statusCode: { name: "Good" }, outputArguments: [{ value: "Hello" }] }]),
         close: jest.fn().mockResolvedValue(undefined),
@@ -51,6 +54,9 @@ function setDefaultNodeOpcuaMock() {
           readVariableValue: jest.fn().mockResolvedValue([
             { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
           ]),
+          read: jest.fn().mockResolvedValue([
+            { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
+          ]),
           write: jest.fn().mockResolvedValue([{ name: "Good" }]),
           call: jest.fn().mockResolvedValue([{ statusCode: { name: "Good" }, outputArguments: [{ value: "Hello" }] }]),
           close: jest.fn().mockResolvedValue(undefined),
@@ -88,7 +94,8 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     const context = createMockContext(params, credentials);
 
     const result = await node.execute.call(context);
-    expect((result[0][0].json.metrics as Record<string, any>)["ns=1;s=TestVariable"]).toBe(42);
+    const metrics = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    expect(metrics["ns=1;s=TestVariable"]).toBe(42);
     expect(result[0][0].json.status).toBe("Good");
   });
 
@@ -108,9 +115,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     const context = createMockContext(params, credentials);
-
     const result = await node.execute.call(context);
-    expect((result[0][0].json.metrics as Record<string, any>)["ns=1;s=WritableVariable"]).toBe(123.45);
+    const metrics = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    expect(metrics["ns=1;s=WritableVariable"]).toBe(123.45);
     expect(result[0][0].json.status).toBe("ok");
   });
 
@@ -132,7 +139,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     const context = createMockContext(params, credentials);
 
     const result = await node.execute.call(context);
-    expect(((result[0][0].json.metrics as any).outputArguments[0].value)).toBe("Hello");
+    expect(((result[0][0].json.metrics ?? {}) as any).outputArguments[0].value).toBe("Hello");
     expect(result[0][0].json.status).toBe("ok");
   });
 
@@ -351,6 +358,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
         readVariableValue: jest.fn().mockResolvedValue([
           { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
         ]),
+        read: jest.fn().mockResolvedValue([
+          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
+        ]),
         close: jest.fn().mockRejectedValue(new Error("close error")),
       }),
     }));
@@ -382,6 +392,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
       createSession: jest.fn().mockResolvedValue({
         write: jest.fn().mockResolvedValue([{ name: "Good" }]),
+        read: jest.fn().mockResolvedValue([
+          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
+        ]),
         close: jest.fn().mockRejectedValue(new Error("close error")),
       }),
     }));
@@ -471,7 +484,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     };
     const context = createMockContext(params, credentials);
     const result = await node.execute.call(context);
-    expect(((result[0][0].json.metrics as any).outputArguments[0].value)).toBe("Hello");
+    expect(((result[0][0].json.metrics ?? {}) as any).outputArguments[0].value).toBe("Hello");
     expect(result[0][0].json.status).toBe("ok");
   });
 
@@ -496,13 +509,17 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
         readVariableValue: jest.fn().mockResolvedValue([
           { statusCode: { name: "BadNodeIdUnknown" }, value: { value: null, dataType: "Double" } }
         ]),
+        read: jest.fn().mockResolvedValue([
+          { statusCode: { name: "BadNodeIdUnknown" }, value: { value: null, dataType: "Double" } }
+        ]),
         close: jest.fn().mockResolvedValue(undefined),
       }),
     }));
     const context = createMockContext(params, credentials);
     const result = await node.execute.call(context);
     expect(result[0][0].json.status).toBe("BadNodeIdUnknown");
-    expect((result[0][0].json.metrics as Record<string, any>)["ns=1;s=BadNode"]).toBeNull();
+    const metrics = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    expect(metrics["ns=1;s=BadNode"]).toBeNull();
   });
 
   it("writer: writeVariable with all supported data types", async () => {
@@ -553,8 +570,10 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     const context = createMockContext(params, credentials);
     const result = await node.execute.call(context);
     expect(result[0][0].json.status).toBe("ok");
-    expect(result[0][0].json.meta.dataType).toBe("UnknownType");
-    expect(result[0][0].json.metrics["ns=1;s=WritableVariable"]).toBe("foobar");
+    const meta = (result[0][0].json.meta ?? {}) as Record<string, any>;
+    expect(meta.dataType).toBe(null);
+    const metrics = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    expect(metrics["ns=1;s=WritableVariable"]).toBe("foobar");
   });
 
   it("writer: writeVariable with DateTime and invalid date string", async () => {
@@ -577,8 +596,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     const context = createMockContext(params, credentials);
     const result = await node.execute.call(context);
     expect(result[0][0].json.status).toBe("ok");
-    expect(result[0][0].json.metrics["ns=1;s=WritableVariable"]).toBeInstanceOf(Date);
-    expect(isNaN(result[0][0].json.metrics["ns=1;s=WritableVariable"]).valueOf()).toBe(true); // Invalid Date
+    const metrics = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    expect(metrics["ns=1;s=WritableVariable"]).toBeInstanceOf(Date);
+    expect(isNaN(metrics["ns=1;s=WritableVariable"]).valueOf()).toBe(true); // Invalid Date
   });
 
   it("writer: writeVariable with ByteString and non-binary string", async () => {
@@ -601,8 +621,8 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     const context = createMockContext(params, credentials);
     const result = await node.execute.call(context);
     expect(result[0][0].json.status).toBe("ok");
-    expect(Buffer.isBuffer(result[0][0].json.metrics["ns=1;s=WritableVariable"]))
-      .toBe(true);
+    const metrics = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    expect(Buffer.isBuffer(metrics["ns=1;s=WritableVariable"])).toBe(true);
   });
 
   it("reader: result.value is undefined (should return null for metrics and meta.dataType)", async () => {
@@ -613,6 +633,9 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       disconnect: jest.fn().mockResolvedValue(undefined),
       createSession: jest.fn().mockResolvedValue({
         readVariableValue: jest.fn().mockResolvedValue([
+          { statusCode: { name: "Good" }, value: undefined }
+        ]),
+        read: jest.fn().mockResolvedValue([
           { statusCode: { name: "Good" }, value: undefined }
         ]),
         close: jest.fn().mockResolvedValue(undefined),
@@ -635,6 +658,445 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     const metrics = json.metrics as import("n8n-workflow").IDataObject;
     expect(metrics["ns=1;s=TestVariable"]).toBeNull();
     const meta = json.meta as import("n8n-workflow").IDataObject;
+    expect(meta.dataType).toBeNull();
+  });
+
+  it("returns correct output for multiple nodeIds in Reader mode", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: ["ns=1;s=TestVariable1", "ns=1;s=TestVariable2"],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    // Patch the mock to return different values for each nodeId
+    const nodeOpcua = require("node-opcua");
+    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockResolvedValue(undefined),
+      createSession: jest.fn().mockResolvedValue({
+        read: jest.fn().mockResolvedValue([
+          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } },
+          { statusCode: { name: "Good" }, value: { value: 99, dataType: "Double" } },
+        ]),
+        close: jest.fn().mockResolvedValue(undefined),
+      }),
+    }));
+    const result = await node.execute.call(context);
+    const metrics0 = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    const metrics1 = (result[0][1].json.metrics ?? {}) as Record<string, any>;
+    expect(metrics0["ns=1;s=TestVariable1"]).toBe(42);
+    expect(metrics1["ns=1;s=TestVariable2"]).toBe(99);
+    expect(result[0][0].json.status).toBe("Good");
+    expect(result[0][1].json.status).toBe("Good");
+  });
+
+  it("returns correct output for multiple items in Writer mode (writeVariable)", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "writeVariable",
+      nodeId: "ns=1;s=WritableVariable",
+      value: "123.45",
+      dataType: "Double",
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    // Patch getInputData to return two items
+    const context = {
+      ...createMockContext(params, credentials),
+      getInputData: () => [{}, {}],
+      getNodeParameter: (name: string, itemIndex: number) => {
+        if (name === "nodeId") return itemIndex === 0 ? "ns=1;s=WritableVariable1" : "ns=1;s=WritableVariable2";
+        if (name === "value") return itemIndex === 0 ? "123.45" : "678.90";
+        if (name === "dataType") return "Double";
+        if (name === "writeOperation") return "writeVariable";
+        if (name === "operation") return "write";
+        return "";
+      },
+    } as unknown as import("n8n-workflow").IExecuteFunctions;
+    // Patch the mock to always return Good
+    const nodeOpcua = require("node-opcua");
+    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockResolvedValue(undefined),
+      createSession: jest.fn().mockResolvedValue({
+        write: jest.fn().mockResolvedValue([{ name: "Good" }]),
+        close: jest.fn().mockResolvedValue(undefined),
+      }),
+    }));
+    const result = await node.execute.call(context);
+    const metrics0 = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    const metrics1 = (result[0][1].json.metrics ?? {}) as Record<string, any>;
+    expect(metrics0["ns=1;s=WritableVariable1"]).toBe(123.45);
+    expect(metrics1["ns=1;s=WritableVariable2"]).toBe(678.90);
+    expect(result[0][0].json.status).toBe("ok");
+    expect(result[0][1].json.status).toBe("ok");
+  });
+
+  it("writer: callMethod with parametersRaw as non-object", async () => {
+    setDefaultNodeOpcuaMock();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "callMethod",
+      objectNodeId: "ns=1;s=Objects",
+      methodNodeId: "ns=1;s=TestMethod",
+      parameters: "not-an-object",
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    const result = await node.execute.call(context);
+    expect(result[0][0].json.status).toBe("ok");
+  });
+
+  it("writer: callMethod with parametersRaw as object but missing arguments", async () => {
+    setDefaultNodeOpcuaMock();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "callMethod",
+      objectNodeId: "ns=1;s=Objects",
+      methodNodeId: "ns=1;s=TestMethod",
+      parameters: {},
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    const result = await node.execute.call(context);
+    expect(result[0][0].json.status).toBe("ok");
+  });
+
+  it("writer: callMethod with arguments not array", async () => {
+    setDefaultNodeOpcuaMock();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "callMethod",
+      objectNodeId: "ns=1;s=Objects",
+      methodNodeId: "ns=1;s=TestMethod",
+      parameters: { arguments: "not-an-array" },
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    const result = await node.execute.call(context);
+    expect(result[0][0].json.status).toBe("ok");
+  });
+
+  it("writer: callMethod with arguments as empty array", async () => {
+    setDefaultNodeOpcuaMock();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "callMethod",
+      objectNodeId: "ns=1;s=Objects",
+      methodNodeId: "ns=1;s=TestMethod",
+      parameters: { arguments: [] },
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    const result = await node.execute.call(context);
+    expect(result[0][0].json.status).toBe("ok");
+  });
+
+  it("writer: callMethod with missing objectNodeId", async () => {
+    setDefaultNodeOpcuaMock();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "callMethod",
+      // objectNodeId missing
+      methodNodeId: "ns=1;s=TestMethod",
+      parameters: {},
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).resolves.toBeDefined();
+  });
+
+  it("writer: callMethod with missing methodNodeId", async () => {
+    setDefaultNodeOpcuaMock();
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "callMethod",
+      objectNodeId: "ns=1;s=Objects",
+      // methodNodeId missing
+      parameters: {},
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).resolves.toBeDefined();
+  });
+
+  it("read: x509 with only certificate", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: ["ns=1;s=TestVariable"],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "x509",
+      certificate: "dummy-cert",
+      // privateKey missing
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).rejects.toThrow("X509 authentication requires both certificate and private key.");
+  });
+
+  it("read: x509 with only privateKey", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: ["ns=1;s=TestVariable"],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "x509",
+      // certificate missing
+      privateKey: "dummy-key",
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).rejects.toThrow("X509 authentication requires both certificate and private key.");
+  });
+
+  it("write: x509 with only certificate", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "writeVariable",
+      nodeId: "ns=1;s=WritableVariable",
+      value: "1",
+      dataType: "Double",
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "x509",
+      certificate: "dummy-cert",
+      // privateKey missing
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).rejects.toThrow("X509 authentication requires both certificate and private key.");
+  });
+
+  it("write: x509 with only privateKey", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "writeVariable",
+      nodeId: "ns=1;s=WritableVariable",
+      value: "1",
+      dataType: "Double",
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "x509",
+      // certificate missing
+      privateKey: "dummy-key",
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).rejects.toThrow("X509 authentication requires both certificate and private key.");
+  });
+
+  it("read: error in both session.close() and client.disconnect() in finally block", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: ["ns=1;s=TestVariable"],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    // Patch the mock to throw in close/disconnect
+    const nodeOpcua = require("node-opcua");
+    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
+      createSession: jest.fn().mockResolvedValue({
+        read: jest.fn().mockResolvedValue([
+          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
+        ]),
+        close: jest.fn().mockRejectedValue(new Error("close error")),
+      }),
+    }));
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).resolves.toBeDefined();
+  });
+
+  it("write: error in both session.close() and client.disconnect() in finally block", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "writeVariable",
+      nodeId: "ns=1;s=WritableVariable",
+      value: "1",
+      dataType: "Double",
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    // Patch the mock to throw in close/disconnect
+    const nodeOpcua = require("node-opcua");
+    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
+      createSession: jest.fn().mockResolvedValue({
+        write: jest.fn().mockResolvedValue([{ name: "Good" }]),
+        close: jest.fn().mockRejectedValue(new Error("close error")),
+      }),
+    }));
+    const context = createMockContext(params, credentials);
+    const result = await node.execute.call(context);
+    expect(result[0][0].json.status).toBe("ok");
+  });
+
+  it("read: result.statusCode is falsy", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: ["ns=1;s=TestVariable"],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    // Patch the mock to return result with no statusCode
+    const nodeOpcua = require("node-opcua");
+    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockResolvedValue(undefined),
+      createSession: jest.fn().mockResolvedValue({
+        read: jest.fn().mockResolvedValue([
+          { value: { value: 42, dataType: "Double" } }
+        ]),
+        close: jest.fn().mockResolvedValue(undefined),
+      }),
+    }));
+    const context = createMockContext(params, credentials);
+    const result = await node.execute.call(context);
+    expect(result[0][0].json.status).toBe("Good");
+    const metrics = (result[0][0].json.metrics ?? {}) as Record<string, any>;
+    expect(metrics["ns=1;s=TestVariable"]).toBe(42);
+  });
+
+  it("read: result.value.dataType is a string (not a number)", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: ["ns=1;s=TestVariable"],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    // Patch the mock to return result.value.dataType as string
+    const nodeOpcua = require("node-opcua");
+    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockResolvedValue(undefined),
+      createSession: jest.fn().mockResolvedValue({
+        read: jest.fn().mockResolvedValue([
+          { statusCode: { name: "Good" }, value: { value: 42, dataType: "not-a-number" } }
+        ]),
+        close: jest.fn().mockResolvedValue(undefined),
+      }),
+    }));
+    const context = createMockContext(params, credentials);
+    const result = await node.execute.call(context);
+    const meta = (result[0][0].json.meta ?? {}) as Record<string, any>;
+    expect(meta.dataType).toBeNull();
+  });
+
+  it("read: result.value.dataType is unknown number (not in map)", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: ["ns=1;s=TestVariable"],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    // Patch the mock to return result.value.dataType as unknown number
+    const nodeOpcua = require("node-opcua");
+    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockResolvedValue(undefined),
+      createSession: jest.fn().mockResolvedValue({
+        read: jest.fn().mockResolvedValue([
+          { statusCode: { name: "Good" }, value: { value: 42, dataType: 9999 } }
+        ]),
+        close: jest.fn().mockResolvedValue(undefined),
+      }),
+    }));
+    const context = createMockContext(params, credentials);
+    const result = await node.execute.call(context);
+    const meta = (result[0][0].json.meta ?? {}) as Record<string, any>;
     expect(meta.dataType).toBeNull();
   });
 });

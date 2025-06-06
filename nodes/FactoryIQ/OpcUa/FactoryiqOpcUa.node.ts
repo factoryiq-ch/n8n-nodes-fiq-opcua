@@ -15,7 +15,7 @@ export class FactoryiqOpcUa implements INodeType {
 		name: 'factoryiqOpcUa',
 		group: ['input', 'output'],
 		version: 1,
-		description: 'Read and write data to OPC UA servers (FactoryIQ unified node)',
+		description: 'Read and write data to OPC UA servers',
 		icon: 'file:FactoryIQ.svg' as Icon,
 		defaults: {
 			name: 'OPC UA',
@@ -25,7 +25,7 @@ export class FactoryiqOpcUa implements INodeType {
 		usableAsTool: true,
 		credentials: [
 			{
-				name: 'opcUaApi',
+				name: 'opcUaCredentialsApi',
 				required: true,
 			},
 		],
@@ -249,6 +249,36 @@ export class FactoryiqOpcUa implements INodeType {
 		}
 	}
 
+	// Add a static mapping for OPC UA DataType numbers to string names
+	private static opcuaDataTypeMap: Record<number, string> = {
+		0: 'Null',
+		1: 'Boolean',
+		2: 'SByte',
+		3: 'Byte',
+		4: 'Int16',
+		5: 'UInt16',
+		6: 'Int32',
+		7: 'UInt32',
+		8: 'Int64',
+		9: 'UInt64',
+		10: 'Float',
+		11: 'Double',
+		12: 'String',
+		13: 'DateTime',
+		14: 'Guid',
+		15: 'ByteString',
+		16: 'XmlElement',
+		17: 'NodeId',
+		18: 'ExpandedNodeId',
+		19: 'StatusCode',
+		20: 'QualifiedName',
+		21: 'LocalizedText',
+		22: 'ExtensionObject',
+		23: 'DataValue',
+		24: 'Variant',
+		25: 'DiagnosticInfo',
+	};
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const results: INodeExecutionData[] = [];
@@ -260,7 +290,7 @@ export class FactoryiqOpcUa implements INodeType {
 			if (!Array.isArray(nodeIds) || nodeIds.length === 0 || !nodeIds[0]) {
 				throw new NodeOperationError(this.getNode(), 'At least one Node ID must be provided for reading.');
 			}
-			const credentials = await this.getCredentials('opcUaApi');
+			const credentials = await this.getCredentials('opcUaCredentials');
 			if (!credentials) {
 				throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
 			}
@@ -274,6 +304,7 @@ export class FactoryiqOpcUa implements INodeType {
 				SecurityPolicy,
 				MessageSecurityMode,
 				UserTokenType,
+				AttributeIds,
 			} = await import('node-opcua');
 
 			const endpointUrl = credentials.endpointUrl as string;
@@ -315,6 +346,8 @@ export class FactoryiqOpcUa implements INodeType {
 					securityModeEnum = MessageSecurityMode.None;
 			}
 
+			const randomSuffix = Math.random().toString(36).substring(2, 10);
+			const clientName = `n8n-opcua-${randomSuffix}`;
 			const clientOptions: any = {
 				securityPolicy: securityPolicyEnum,
 				securityMode: securityModeEnum,
@@ -323,7 +356,7 @@ export class FactoryiqOpcUa implements INodeType {
 					maxRetry: 3,
 					maxDelay: 10000,
 				},
-				clientName: 'n8n-opcua-unified',
+				clientName,
 				requestedSessionTimeout: 60000,
 				endpointMustExist: false,
 				securityOptions: {
@@ -368,14 +401,18 @@ export class FactoryiqOpcUa implements INodeType {
 			}
 
 			try {
-				const readResults = await session.readVariableValue(nodeIds);
+				const nodesToRead = nodeIds.map(nodeId => ({
+					nodeId,
+					attributeId: AttributeIds.Value,
+				}));
+				const readResults = await session.read(nodesToRead);
 				for (let i = 0; i < nodeIds.length; i++) {
 					const nodeId = nodeIds[i];
 					const result = readResults[i];
 					if (result.statusCode && result.statusCode.name !== 'Good') {
 						const output: FactoryIQNodeOutput = {
 							timestamp: Date.now(),
-							source: 'OpcUaUnified',
+							source: clientName,
 							protocol: 'opcua',
 							address: nodeId,
 							metrics: { [nodeId]: null },
@@ -386,12 +423,12 @@ export class FactoryiqOpcUa implements INodeType {
 					} else {
 						const output: FactoryIQNodeOutput = {
 							timestamp: Date.now(),
-							source: 'OpcUaUnified',
+							source: clientName,
 							protocol: 'opcua',
 							address: nodeId,
 							metrics: { [nodeId]: result.value ? result.value.value : null },
 							status: 'Good',
-							meta: { dataType: result.value ? result.value.dataType : null },
+							meta: { dataType: (result.value && typeof result.value.dataType === 'number' && FactoryiqOpcUa.opcuaDataTypeMap[result.value.dataType] !== undefined) ? FactoryiqOpcUa.opcuaDataTypeMap[result.value.dataType] : null },
 						};
 						results.push({ json: output as unknown as IDataObject });
 					}
@@ -424,7 +461,7 @@ export class FactoryiqOpcUa implements INodeType {
 				} else {
 					throw new NodeOperationError(this.getNode(), 'Unsupported operation type.');
 				}
-				const credentials = await this.getCredentials('opcUaApi');
+				const credentials = await this.getCredentials('opcUaCredentials');
 				if (!credentials) {
 					throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
 				}
@@ -472,6 +509,8 @@ export class FactoryiqOpcUa implements INodeType {
 						securityModeEnum = MessageSecurityMode.None;
 				}
 
+				const randomSuffix = Math.random().toString(36).substring(2, 10);
+				const clientName = `n8n-opcua-${randomSuffix}`;
 				const clientOptions: any = {
 					securityPolicy: securityPolicyEnum,
 					securityMode: securityModeEnum,
@@ -480,7 +519,7 @@ export class FactoryiqOpcUa implements INodeType {
 						maxRetry: 3,
 						maxDelay: 10000,
 					},
-					clientName: 'n8n-opcua-unified',
+					clientName,
 					requestedSessionTimeout: 60000,
 					endpointMustExist: false,
 					securityOptions: {
@@ -540,12 +579,12 @@ export class FactoryiqOpcUa implements INodeType {
 						const operationResult = await session.write(nodesToWrite);
 						const output: FactoryIQNodeOutput = {
 							timestamp: Date.now(),
-							source: 'OpcUaUnified',
+							source: clientName,
 							protocol: 'opcua',
 							address: nodeId,
 							metrics: { [nodeId]: writeValue },
 							status: (operationResult[0]?.name || operationResult[0]?.toString()) === 'Good' ? 'ok' : 'error',
-							meta: { dataType, operationType: 'variable_write', statusCode: operationResult[0]?.name || operationResult[0]?.toString() },
+							meta: { dataType: (typeof dataTypeEnum === 'number' && FactoryiqOpcUa.opcuaDataTypeMap[dataTypeEnum] !== undefined) ? FactoryiqOpcUa.opcuaDataTypeMap[dataTypeEnum] : null, operationType: 'variable_write', statusCode: operationResult[0]?.name || operationResult[0]?.toString() },
 						};
 						results.push({ json: output as unknown as IDataObject });
 					} else if (writeOperation === 'callMethod') {
@@ -572,7 +611,7 @@ export class FactoryiqOpcUa implements INodeType {
 						const operationResult = await session.call(methodCall);
 						const output: FactoryIQNodeOutput = {
 							timestamp: Date.now(),
-							source: 'OpcUaUnified',
+							source: clientName,
 							protocol: 'opcua',
 							address: methodNodeId,
 							metrics: { outputArguments: operationResult[0]?.outputArguments || [] },
