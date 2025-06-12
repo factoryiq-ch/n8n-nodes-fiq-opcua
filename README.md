@@ -61,7 +61,7 @@ This n8n community node allows you to connect to OPC UA servers to read and writ
 |----------------|------------|-----------------------------------------------------------|
 | n8n            | 1.95.3     | [npm](https://www.npmjs.com/package/n8n)                  |
 | n8n-workflow   | 1.82.0     | [npm](https://www.npmjs.com/package/n8n-workflow)         |
-| Node.js        | 18.18.0    | [nodejs.org](https://nodejs.org/)                         |
+| Node.js        | 18.17.0    | [nodejs.org](https://nodejs.org/)                         |
 | Node.js (LTS)  | 20.14.0    | [nodejs.org](https://nodejs.org/)                         |
 | Node.js (LTS)  | 22.16.0    | [nodejs.org](https://nodejs.org/)                         |
 

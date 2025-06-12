@@ -19,7 +19,7 @@
     "url": "https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/issues"
   },
   "engines": {
-    "node": ">=18.18.0"
+    "node": ">=18.17.0"
   },
   "main": "index.js",
   "scripts": {
