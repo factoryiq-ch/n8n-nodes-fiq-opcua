@@ -4,60 +4,66 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-publish:
+  build-and-release-pr:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
       actions: write
+
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+
       - name: Set up git user for CI
         run: |
           git config user.name "FactoryIQ CI"
           git config user.email "noreply@factoryiq.ch"
+
       - name: Use Node.js 18.17.0
         uses: actions/setup-node@v4
         with:
           node-version: 18.17.0
           registry-url: 'https://registry.npmjs.org/'
+
       - name: Install dependencies
         run: npm ci
+
       - name: Lint
         run: npm run lint
+
       - name: Build
         run: npm run build
+
       - name: Test
         run: npm run test
-      - name: Release (standard-version)
-        run: |
-          # Run standard-version to bump version and create changelog
-          npm run release
 
-          # Get the new version after bump
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push tags only
+      - name: Bump version using standard-version
         run: |
-          # Only push the tags, skip pushing to main branch
-          git push origin --tags
+          BRANCH_NAME="release/$(date +%s)"
+          git checkout -b "$BRANCH_NAME"
+
+          # Configure standard-version to not prefix tags
+          echo '{"tagPrefix": ""}' > .versionrc.json
+
+          # Run release and capture version
+          npm run release
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          git add .
+          git commit -m "chore(release): ${VERSION}"
+          git push origin "$BRANCH_NAME"
+        id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create GitHub Release
-        run: |
-          # Create GitHub release from the tag
-          gh release create "v${NEW_VERSION}" \
-            --title "v${NEW_VERSION}" \
-            --notes-file CHANGELOG.md \
-            --latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish to npm
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(release): ${{ steps.release.outputs.version }}"
+          body: "This PR bumps the version to **${{ steps.release.outputs.version }}** and updates CHANGELOG.md."
+          branch: "release/${{ steps.release.outputs.version }}"
