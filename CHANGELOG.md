@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.8](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.3...v0.1.8) (2025-06-13)
+
+
+### Chores
+
+* **release:** 0.1.7 ([96f6452](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/96f64521fdada66a300792293a4ced77f00f7506))
+* **release:** 0.1.7 ([315fe2e](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/315fe2e0d1c443a1c7090c3ffcff108b89d090fb))
+
 ### [0.1.7](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.3...v0.1.7) (2025-06-13)
 
 ### 0.1.3 (2025-06-13)
