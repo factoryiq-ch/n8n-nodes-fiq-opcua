@@ -62,6 +62,6 @@ jobs:
 
       - name: Push tag
         run: |
-          git push origin ${{ steps.release.outputs.version }}
+          git push origin --tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
