@@ -1,5 +1,7 @@
 [![CI](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/actions/workflows/ci.yml/badge.svg)](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/factoryiq-ch/n8n-nodes-fiq-opcua/branch/main/graph/badge.svg?token=GOATJAVAM0)](https://codecov.io/gh/factoryiq-ch/n8n-nodes-fiq-opcua)
+[![npm version](https://img.shields.io/npm/v/@n8n-nodes-fiq-opcua.svg)](https://www.npmjs.com/package/@n8n-nodes-fiq-opcua)
+[![GitHub release](https://img.shields.io/github/v/release/factoryiq-ch/n8n-nodes-fiq-opcua)](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases)
 
 <p align="center">
   <img src="icons/FactoryIQ.svg" alt="FactoryIQ Logo" width="200"/>
@@ -24,11 +26,40 @@ This n8n community node allows you to connect to OPC UA servers to read and writ
 
 ## Installation
 
-1. Install this node in your n8n instance:
-   ```bash
-   npm install n8n-nodes-fiq-opcua
-   ```
-2. Restart n8n.
+```bash
+npm install @n8n-nodes-fiq-opcua
+```
+
+## Usage
+
+Import and use this custom node in your n8n instance. See the [n8n documentation](https://docs.n8n.io/) for details on using custom nodes.
+
+## Development
+
+- Clone the repository
+- Install dependencies: `npm ci`
+- Build: `npm run build`
+- Lint: `npm run lint`
+- Test: `npm run test`
+
+## Publishing
+
+- Ensure you are on the `main` branch and your working directory is clean
+- Bump the version and generate changelog:
+  ```bash
+  npm run release
+  git push --follow-tags origin main
+  ```
+- Trigger the publish workflow manually from GitHub Actions
+- The workflow will publish to npm and create a GitHub release
+
+## NPM Package
+
+[https://www.npmjs.com/package/@n8n-nodes-fiq-opcua](https://www.npmjs.com/package/@n8n-nodes-fiq-opcua)
+
+## GitHub Releases
+
+[https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases)
 
 ---
 
