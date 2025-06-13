@@ -34,23 +34,60 @@ jobs:
         run: npm run test
       - name: Release (standard-version)
         run: |
-          # Use standard-version to bump version and update changelog, but skip commit and tag
-          npx standard-version --skip.commit --skip.tag
-          # Manually commit the changes
-          git add package.json CHANGELOG.md
-          git commit -m "chore(release): $(node -p "require('./package.json').version")"
-          # Create the tag
-          git tag "v$(node -p "require('./package.json').version")"
-      - name: Push tags only
+          # Get the current version to create branch name
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+
+          # Create and switch to release branch
+          git checkout -b "release/v${CURRENT_VERSION}"
+
+          # Run standard-version to bump version and create changelog
+          npm run release
+
+          # Push the release branch
+          git push origin "release/v${CURRENT_VERSION}"
+
+          # Get the new version after bump
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Pull Request
         run: |
-          # Only push the tags, skip pushing to main branch
-          git push origin --tags
+          # Create PR from release branch to main
+          gh pr create \
+            --title "chore(release): ${NEW_VERSION}" \
+            --body "Automated release PR for version ${NEW_VERSION}" \
+            --base main \
+            --head "release/v${NEW_VERSION}"
+
+          # Wait a moment for PR to be created
+          sleep 5
+
+          # Merge the PR immediately (manual merge, not auto-merge)
+          gh pr merge "release/v${NEW_VERSION}" --squash --delete-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Wait for PR merge and create release
+        run: |
+          # Wait a bit for PR to be processed
+          sleep 10
+
+          # Switch back to main and pull latest
+          git checkout main
+          git pull origin main
+
+          # Create and push tag
+          git tag "v${NEW_VERSION}"
+          git push origin "v${NEW_VERSION}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create GitHub Release
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-          gh release create "$LATEST_TAG" --notes-file CHANGELOG.md --title "$LATEST_TAG" --latest
+          # Create GitHub release from the tag
+          gh release create "v${NEW_VERSION}" \
+            --title "v${NEW_VERSION}" \
+            --notes-file CHANGELOG.md \
+            --latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to npm
