@@ -8,6 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up git user for CI
+        run: |
+          git config user.name "FactoryIQ CI"
+          git config user.email "noreply@factoryiq.ch"
       - name: Use Node.js 18.17.0
         uses: actions/setup-node@v4
         with:
@@ -27,8 +31,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Push changes and tags
         run: |
-          git config user.name "FactoryIQ CI"
-          git config user.email "noreply@factoryiq.ch"
           git push --follow-tags origin main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
