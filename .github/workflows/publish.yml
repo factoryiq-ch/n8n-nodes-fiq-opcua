@@ -27,8 +27,13 @@ jobs:
         run: npm run test
       - name: Release (standard-version)
         run: npm run release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push changes and tags
+        run: |
+          git push --follow-tags origin main
+      - name: Create GitHub Release
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          gh release create "$LATEST_TAG" --notes-file CHANGELOG.md --title "$LATEST_TAG" --latest
       - name: Publish to npm
         run: npm publish
         env:
