@@ -1,5 +1,5 @@
 {
-  "name": "@n8n-nodes-fiq-opcua",
+  "name": "@fiqch/n8n-nodes-fiq-opcua",
   "version": "0.1.2",
   "description": "n8n custom node for reading and writing OPC UA data (FactoryIQ)",
   "keywords": [
