@@ -12,10 +12,6 @@ jobs:
         run: |
           git config user.name "FactoryIQ CI"
           git config user.email "noreply@factoryiq.ch"
-      - name: Authenticate GitHub CLI
-        run: echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
       - name: Use Node.js 18.17.0
         uses: actions/setup-node@v4
         with:
@@ -34,13 +30,13 @@ jobs:
       - name: Push changes and tags
         run: git push --follow-tags origin main
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create GitHub Release
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
           gh release create "$LATEST_TAG" --notes-file CHANGELOG.md --title "$LATEST_TAG" --latest
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to npm
         run: npm publish
         env:
