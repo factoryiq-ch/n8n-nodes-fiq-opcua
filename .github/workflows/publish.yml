@@ -36,19 +36,22 @@ jobs:
         run: |
           # Get the current version to create branch name
           CURRENT_VERSION=$(node -p "require('./package.json').version")
+          TIMESTAMP=$(date +%s)
+          BRANCH_NAME="release/v${CURRENT_VERSION}-${TIMESTAMP}"
 
-          # Create and switch to release branch
-          git checkout -b "release/v${CURRENT_VERSION}"
+          # Create and switch to release branch with unique name
+          git checkout -b "${BRANCH_NAME}"
 
           # Run standard-version to bump version and create changelog
           npm run release
 
-          # Push the release branch
-          git push origin "release/v${CURRENT_VERSION}"
+          # Force push the release branch (in case it exists)
+          git push origin "${BRANCH_NAME}" --force
 
           # Get the new version after bump
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+          echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create Pull Request
@@ -58,15 +61,15 @@ jobs:
             --title "chore(release): ${NEW_VERSION}" \
             --body "Automated release PR for version ${NEW_VERSION}" \
             --base main \
-            --head "release/v${NEW_VERSION}"
+            --head "${BRANCH_NAME}"
 
           # Wait a moment for PR to be created
           sleep 5
 
           # Merge the PR immediately (manual merge, not auto-merge)
-          gh pr merge "release/v${NEW_VERSION}" --squash --delete-branch
+          gh pr merge "${BRANCH_NAME}" --squash --delete-branch
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
       - name: Wait for PR merge and create release
         run: |
           # Wait a bit for PR to be processed
