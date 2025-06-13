@@ -56,12 +56,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "chore(release): ${{ steps.release.outputs.version }}"
-          body: "This PR bumps the version to **${{ steps.release.outputs.version }}** and updates CHANGELOG.md."
+          body: |
+            This PR bumps the version to **${{ steps.release.outputs.version }}** and updates CHANGELOG.md.
+
+            After merging this PR, a tag will be automatically created and the package will be published to npm.
           branch: "release/${{ steps.release.outputs.version }}"
           commit-message: "chore(release): ${{ steps.release.outputs.version }}"
-
-      - name: Push tag
-        run: |
-          git push origin --tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
