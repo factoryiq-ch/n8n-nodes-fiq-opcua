@@ -59,3 +59,9 @@ jobs:
           body: "This PR bumps the version to **${{ steps.release.outputs.version }}** and updates CHANGELOG.md."
           branch: "release/${{ steps.release.outputs.version }}"
           commit-message: "chore(release): ${{ steps.release.outputs.version }}"
+
+      - name: Push tag
+        run: |
+          git push origin ${{ steps.release.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
