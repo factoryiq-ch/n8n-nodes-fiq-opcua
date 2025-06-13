@@ -12,6 +12,8 @@ jobs:
         run: |
           git config user.name "FactoryIQ CI"
           git config user.email "noreply@factoryiq.ch"
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
       - name: Use Node.js 18.17.0
         uses: actions/setup-node@v4
         with:
