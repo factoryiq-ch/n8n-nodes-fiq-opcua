@@ -34,54 +34,18 @@ jobs:
         run: npm run test
       - name: Release (standard-version)
         run: |
-          # Get the current version to create branch name
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          TIMESTAMP=$(date +%s)
-          BRANCH_NAME="release/v${CURRENT_VERSION}-${TIMESTAMP}"
-
-          # Create and switch to release branch with unique name
-          git checkout -b "${BRANCH_NAME}"
-
           # Run standard-version to bump version and create changelog
           npm run release
-
-          # Force push the release branch (in case it exists)
-          git push origin "${BRANCH_NAME}" --force
 
           # Get the new version after bump
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
-          echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create Pull Request
+      - name: Push tags only
         run: |
-          # Create PR from release branch to main
-          gh pr create \
-            --title "chore(release): ${NEW_VERSION}" \
-            --body "Automated release PR for version ${NEW_VERSION}" \
-            --base main \
-            --head "${BRANCH_NAME}"
-
-          # Wait a moment for PR to be created
-          sleep 5
-
-          # Merge the PR immediately (manual merge, not auto-merge)
-          gh pr merge "${BRANCH_NAME}" --squash --delete-branch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-      - name: Wait for PR merge and create release
-        run: |
-          # Wait a bit for PR to be processed
-          sleep 10
-
-          # Switch back to main and pull latest
-          git checkout main
-          git pull origin main
-
-          # Create and push tag
-          git tag "v${NEW_VERSION}"
-          git push origin "v${NEW_VERSION}"
+          # Only push the tags, skip pushing to main branch
+          git push origin --tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Create GitHub Release
