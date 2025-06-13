@@ -33,7 +33,14 @@ jobs:
       - name: Test
         run: npm run test
       - name: Release (standard-version)
-        run: npm run release
+        run: |
+          # Use standard-version to bump version and update changelog, but skip commit and tag
+          npx standard-version --skip.commit --skip.tag
+          # Manually commit the changes
+          git add package.json CHANGELOG.md
+          git commit -m "chore(release): $(node -p "require('./package.json').version")"
+          # Create the tag
+          git tag "v$(node -p "require('./package.json').version")"
       - name: Push tags only
         run: |
           # Only push the tags, skip pushing to main branch
