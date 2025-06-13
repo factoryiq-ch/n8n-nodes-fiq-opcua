@@ -62,3 +62,9 @@ jobs:
             After merging this PR, a tag will be automatically created and the package will be published to npm.
           branch: "release/${{ steps.release.outputs.version }}"
           commit-message: "chore(release): ${{ steps.release.outputs.version }}"
+
+      - name: Push tag
+        run: |
+          git push origin ${{ steps.release.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
