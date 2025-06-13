@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.10](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.9...v0.1.10) (2025-06-13)
+
+
+### Features
+
+* implement proper release workflow with post-merge tagging ([c83911d](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/c83911df77c18878d67fcc6541c2b638bcde63d7))
+
 ### [0.1.9](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.3...v0.1.9) (2025-06-13)
 
 
