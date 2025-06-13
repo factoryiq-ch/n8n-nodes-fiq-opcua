@@ -42,9 +42,6 @@ jobs:
 
       - name: Bump version using standard-version
         run: |
-          BRANCH_NAME="release/$(date +%s)"
-          git checkout -b "$BRANCH_NAME"
-
           # Configure standard-version to not prefix tags
           echo '{"tagPrefix": ""}' > .versionrc.json
 
@@ -52,13 +49,7 @@ jobs:
           npm run release
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-          git add .
-          git commit -m "chore(release): ${VERSION}"
-          git push origin "$BRANCH_NAME"
         id: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
@@ -67,3 +58,4 @@ jobs:
           title: "chore(release): ${{ steps.release.outputs.version }}"
           body: "This PR bumps the version to **${{ steps.release.outputs.version }}** and updates CHANGELOG.md."
           branch: "release/${{ steps.release.outputs.version }}"
+          commit-message: "chore(release): ${{ steps.release.outputs.version }}"
