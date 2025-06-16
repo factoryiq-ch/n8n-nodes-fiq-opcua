@@ -97,33 +97,6 @@ Import and use this custom node in your n8n instance. See the [n8n documentation
 
 ---
 
-## Dependencies
-
-This node requires the [`node-opcua`](https://github.com/node-opcua/node-opcua) library to communicate with OPC UA servers. No other runtime dependencies are included. This is in line with n8n community node standards for protocol nodes, where a protocol library is essential for functionality.
-
----
-
-## Vendor Integration & Attribution
-
-This package is fully self-contained and does not require the `node-opcua` package as an external dependency. Instead, select client-side functionalities from the [node-opcua](https://github.com/node-opcua/node-opcua) project ([npm](https://www.npmjs.com/package/node-opcua)) are included in a minimal vendor directory for compatibility and long-term maintainability.
-
-**Note**: This package includes only essential client-side modules from node-opcua, not all files. Server components, development tools, and unnecessary features have been excluded to minimize package size while preserving full functionality.
-
-### Vendor Directory Structure
-
-- `vendor/index.js` – Minimal entry point, re-exporting only the OPC UA client symbols required by this package.
-- `vendor/node-opcua/index.js` – Minimal client-only build of node-opcua, stripped of server code and unused features.
-- `vendor/index.d.ts` – Minimal TypeScript declarations for vendor exports.
-
-### Benefits of Self-Contained Approach
-- **No external dependencies**: Reduces attack surface and simplifies deployment.
-- **Smaller package size**: Only the required OPC UA client code is included.
-- **Optimized for n8n**: Stripped of source maps, documentation, and server-side code.
-
-
-
----
-
 ## Resources
 
 - [NPM Package](https://www.npmjs.com/package/@fiqch/n8n-nodes-fiq-opcua)
