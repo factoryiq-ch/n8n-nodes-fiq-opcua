@@ -1,4 +1,3 @@
-import 'module-alias/register';
 import type {
 	IExecuteFunctions,
 	INodeExecutionData,
@@ -9,7 +8,7 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import type { FactoryIQNodeOutput } from './FactoryIQNodeOutput';
-import * as vendor from '@vendor';
+import * as vendor from '../../../vendor';
 
 export class FactoryiqOpcUa implements INodeType {
 	description: INodeTypeDescription = {
