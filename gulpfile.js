@@ -1,7 +1,10 @@
 const path = require('path');
-const { task, src, dest } = require('gulp');
+const { task, src, dest, series } = require('gulp');
 
-task('build:icons', copyIcons);
+task('copy:vendor', copyVendor);
+task('build:icons', series(copyIcons, copyVendor));
+
+task('default', series('build:icons'));
 
 function copyIcons() {
 	const nodeSource = path.resolve('nodes', '**', '*.{png,svg}');
@@ -13,4 +16,8 @@ function copyIcons() {
 	const credDestination = path.resolve('dist', 'credentials');
 
 	return src(credSource).pipe(dest(credDestination));
+}
+
+function copyVendor() {
+	return src(path.resolve('vendor', '**', '*')).pipe(dest(path.resolve('dist', 'vendor')));
 }

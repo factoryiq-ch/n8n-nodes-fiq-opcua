@@ -1,28 +1,30 @@
 import { FactoryiqOpcUa } from "../nodes/FactoryIQ/OpcUa";
 import type { IExecuteFunctions } from "n8n-workflow";
 
-jest.mock("../vendor", () => ({
+jest.mock('@vendor', () => ({
   OPCUAClient: {
     create: jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
       createSession: jest.fn().mockResolvedValue({
         readVariableValue: jest.fn().mockResolvedValue([
-          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
+          { statusCode: { name: 'Good' }, value: { value: 42, dataType: 'Double' } },
         ]),
         read: jest.fn().mockResolvedValue([
-          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
+          { statusCode: { name: 'Good' }, value: { value: 42, dataType: 'Double' } },
         ]),
-        write: jest.fn().mockResolvedValue([{ name: "Good" }]),
-        call: jest.fn().mockResolvedValue([{ statusCode: { name: "Good" }, outputArguments: [{ value: "Hello" }] }]),
+        write: jest.fn().mockResolvedValue([{ name: 'Good' }]),
+        call: jest.fn().mockResolvedValue([
+          { statusCode: { name: 'Good' }, outputArguments: [{ value: 'Hello' }] },
+        ]),
         close: jest.fn().mockResolvedValue(undefined),
       }),
     })),
   },
-  SecurityPolicy: { None: "None" },
-  MessageSecurityMode: { None: "None" },
-  UserTokenType: { UserName: "UserName", Certificate: "Certificate" },
-  DataType: { Double: "Double", String: "String" },
+  SecurityPolicy: { None: 'None' },
+  MessageSecurityMode: { None: 'None' },
+  UserTokenType: { UserName: 'UserName', Certificate: 'Certificate' },
+  DataType: { Double: 'Double', String: 'String' },
   AttributeIds: { Value: 13 },
 }));
 
@@ -45,7 +47,7 @@ function createMockContext(params: Record<string, any>, credentials: any): IExec
 // Helper to set the default node-opcua mock for all session methods
 function setDefaultNodeOpcuaMock() {
   jest.resetModules();
-  jest.doMock("../vendor", () => ({
+  jest.doMock('@vendor', () => ({
     OPCUAClient: {
       create: jest.fn(() => ({
         connect: jest.fn().mockResolvedValue(undefined),
@@ -144,13 +146,25 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("handles errors gracefully", async () => {
-    // Override the mock to throw
-    const nodeOpcua = require("../vendor");
-    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
-      connect: jest.fn().mockRejectedValue(new Error("Connection failed")),
-      disconnect: jest.fn().mockResolvedValue(undefined),
+    // Reset modules to ensure clean mock state
+    jest.resetModules();
+    // Override the mock to throw on connect
+    jest.doMock('@vendor', () => ({
+      OPCUAClient: {
+        create: jest.fn(() => ({
+          connect: jest.fn().mockRejectedValue(new Error("Connection failed")),
+          disconnect: jest.fn().mockResolvedValue(undefined),
+        })),
+      },
+      SecurityPolicy: { None: "None", Basic128Rsa15: "Basic128Rsa15", Basic256: "Basic256", Basic256Sha256: "Basic256Sha256", Aes128_Sha256_RsaOaep: "Aes128_Sha256_RsaOaep", Aes256_Sha256_RsaPss: "Aes256_Sha256_RsaPss" },
+      MessageSecurityMode: { None: "None", Sign: "Sign", SignAndEncrypt: "SignAndEncrypt" },
+      UserTokenType: { UserName: "UserName", Certificate: "Certificate" },
+      DataType: { Double: "Double", String: "String", Boolean: "Boolean", SByte: "SByte", Byte: "Byte", Int16: "Int16", UInt16: "UInt16", Int32: "Int32", UInt32: "UInt32", Int64: "Int64", UInt64: "UInt64", Float: "Float", DateTime: "DateTime", Guid: "Guid", ByteString: "ByteString" },
+      AttributeIds: { Value: 13 },
     }));
 
+    // Re-import the module with new mock
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
     const node = new FactoryiqOpcUa();
     const params = {
       operation: "read",
@@ -350,7 +364,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in close/disconnect
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
@@ -386,7 +400,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in close/disconnect
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
@@ -421,7 +435,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in write
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -452,7 +466,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in call
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -489,6 +503,30 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("reader: bad status code", async () => {
+    // Reset modules and set up mock for bad status code
+    jest.resetModules();
+    jest.doMock('@vendor', () => ({
+      OPCUAClient: {
+        create: jest.fn(() => ({
+          connect: jest.fn().mockResolvedValue(undefined),
+          disconnect: jest.fn().mockResolvedValue(undefined),
+          createSession: jest.fn().mockResolvedValue({
+            read: jest.fn().mockResolvedValue([
+              { statusCode: { name: "BadNodeIdUnknown" }, value: { value: null, dataType: "Double" } }
+            ]),
+            close: jest.fn().mockResolvedValue(undefined),
+          }),
+        })),
+      },
+      SecurityPolicy: { None: "None", Basic128Rsa15: "Basic128Rsa15", Basic256: "Basic256", Basic256Sha256: "Basic256Sha256", Aes128_Sha256_RsaOaep: "Aes128_Sha256_RsaOaep", Aes256_Sha256_RsaPss: "Aes256_Sha256_RsaPss" },
+      MessageSecurityMode: { None: "None", Sign: "Sign", SignAndEncrypt: "SignAndEncrypt" },
+      UserTokenType: { UserName: "UserName", Certificate: "Certificate" },
+      DataType: { Double: "Double", String: "String", Boolean: "Boolean", SByte: "SByte", Byte: "Byte", Int16: "Int16", UInt16: "UInt16", Int32: "Int32", UInt32: "UInt32", Int64: "Int64", UInt64: "UInt64", Float: "Float", DateTime: "DateTime", Guid: "Guid", ByteString: "ByteString" },
+      AttributeIds: { Value: 13 },
+    }));
+
+    // Re-import the module with new mock
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
     const node = new FactoryiqOpcUa();
     const params = {
       operation: "read",
@@ -500,21 +538,6 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       securityMode: "None",
       authenticationType: "anonymous",
     };
-    // Patch the mock to return bad status
-    const nodeOpcua = require("../vendor");
-    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
-      connect: jest.fn().mockResolvedValue(undefined),
-      disconnect: jest.fn().mockResolvedValue(undefined),
-      createSession: jest.fn().mockResolvedValue({
-        readVariableValue: jest.fn().mockResolvedValue([
-          { statusCode: { name: "BadNodeIdUnknown" }, value: { value: null, dataType: "Double" } }
-        ]),
-        read: jest.fn().mockResolvedValue([
-          { statusCode: { name: "BadNodeIdUnknown" }, value: { value: null, dataType: "Double" } }
-        ]),
-        close: jest.fn().mockResolvedValue(undefined),
-      }),
-    }));
     const context = createMockContext(params, credentials);
     const result = await node.execute.call(context);
     expect(result[0][0].json.status).toBe("BadNodeIdUnknown");
@@ -626,21 +649,30 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("reader: result.value is undefined (should return null for metrics and meta.dataType)", async () => {
-    // Patch the mock to return result.value as undefined
-    const nodeOpcua = require("../vendor");
-    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
-      connect: jest.fn().mockResolvedValue(undefined),
-      disconnect: jest.fn().mockResolvedValue(undefined),
-      createSession: jest.fn().mockResolvedValue({
-        readVariableValue: jest.fn().mockResolvedValue([
-          { statusCode: { name: "Good" }, value: undefined }
-        ]),
-        read: jest.fn().mockResolvedValue([
-          { statusCode: { name: "Good" }, value: undefined }
-        ]),
-        close: jest.fn().mockResolvedValue(undefined),
-      }),
+    // Reset modules and set up mock for undefined result.value
+    jest.resetModules();
+    jest.doMock('@vendor', () => ({
+      OPCUAClient: {
+        create: jest.fn(() => ({
+          connect: jest.fn().mockResolvedValue(undefined),
+          disconnect: jest.fn().mockResolvedValue(undefined),
+          createSession: jest.fn().mockResolvedValue({
+            read: jest.fn().mockResolvedValue([
+              { statusCode: { name: "Good" }, value: undefined }
+            ]),
+            close: jest.fn().mockResolvedValue(undefined),
+          }),
+        })),
+      },
+      SecurityPolicy: { None: "None", Basic128Rsa15: "Basic128Rsa15", Basic256: "Basic256", Basic256Sha256: "Basic256Sha256", Aes128_Sha256_RsaOaep: "Aes128_Sha256_RsaOaep", Aes256_Sha256_RsaPss: "Aes256_Sha256_RsaPss" },
+      MessageSecurityMode: { None: "None", Sign: "Sign", SignAndEncrypt: "SignAndEncrypt" },
+      UserTokenType: { UserName: "UserName", Certificate: "Certificate" },
+      DataType: { Double: "Double", String: "String", Boolean: "Boolean", SByte: "SByte", Byte: "Byte", Int16: "Int16", UInt16: "UInt16", Int32: "Int32", UInt32: "UInt32", Int64: "Int64", UInt64: "UInt64", Float: "Float", DateTime: "DateTime", Guid: "Guid", ByteString: "ByteString" },
+      AttributeIds: { Value: 13 },
     }));
+
+    // Re-import the module with new mock
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
     const node = new FactoryiqOpcUa();
     const params = {
       operation: "read",
@@ -662,6 +694,31 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
   });
 
   it("returns correct output for multiple nodeIds in Reader mode", async () => {
+    // Reset modules and set up mock for multiple node reads
+    jest.resetModules();
+    jest.doMock('@vendor', () => ({
+      OPCUAClient: {
+        create: jest.fn(() => ({
+          connect: jest.fn().mockResolvedValue(undefined),
+          disconnect: jest.fn().mockResolvedValue(undefined),
+          createSession: jest.fn().mockResolvedValue({
+            read: jest.fn().mockResolvedValue([
+              { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } },
+              { statusCode: { name: "Good" }, value: { value: 99, dataType: "Double" } },
+            ]),
+            close: jest.fn().mockResolvedValue(undefined),
+          }),
+        })),
+      },
+      SecurityPolicy: { None: "None", Basic128Rsa15: "Basic128Rsa15", Basic256: "Basic256", Basic256Sha256: "Basic256Sha256", Aes128_Sha256_RsaOaep: "Aes128_Sha256_RsaOaep", Aes256_Sha256_RsaPss: "Aes256_Sha256_RsaPss" },
+      MessageSecurityMode: { None: "None", Sign: "Sign", SignAndEncrypt: "SignAndEncrypt" },
+      UserTokenType: { UserName: "UserName", Certificate: "Certificate" },
+      DataType: { Double: "Double", String: "String", Boolean: "Boolean", SByte: "SByte", Byte: "Byte", Int16: "Int16", UInt16: "UInt16", Int32: "Int32", UInt32: "UInt32", Int64: "Int64", UInt64: "UInt64", Float: "Float", DateTime: "DateTime", Guid: "Guid", ByteString: "ByteString" },
+      AttributeIds: { Value: 13 },
+    }));
+
+    // Re-import the module with new mock
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
     const node = new FactoryiqOpcUa();
     const params = {
       operation: "read",
@@ -674,19 +731,6 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     const context = createMockContext(params, credentials);
-    // Patch the mock to return different values for each nodeId
-    const nodeOpcua = require("../vendor");
-    nodeOpcua.OPCUAClient.create = jest.fn(() => ({
-      connect: jest.fn().mockResolvedValue(undefined),
-      disconnect: jest.fn().mockResolvedValue(undefined),
-      createSession: jest.fn().mockResolvedValue({
-        read: jest.fn().mockResolvedValue([
-          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } },
-          { statusCode: { name: "Good" }, value: { value: 99, dataType: "Double" } },
-        ]),
-        close: jest.fn().mockResolvedValue(undefined),
-      }),
-    }));
     const result = await node.execute.call(context);
     const metrics0 = (result[0][0].json.metrics ?? {}) as Record<string, any>;
     const metrics1 = (result[0][1].json.metrics ?? {}) as Record<string, any>;
@@ -725,7 +769,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       },
     } as unknown as import("n8n-workflow").IExecuteFunctions;
     // Patch the mock to always return Good
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -964,7 +1008,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in close/disconnect
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
@@ -995,7 +1039,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in close/disconnect
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
@@ -1022,7 +1066,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to return result with no statusCode
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -1053,7 +1097,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to return result.value.dataType as string
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -1083,7 +1127,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to return result.value.dataType as unknown number
-    const nodeOpcua = require("../vendor");
+    const nodeOpcua = require('@vendor');
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),

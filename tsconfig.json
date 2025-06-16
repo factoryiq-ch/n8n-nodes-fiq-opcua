@@ -22,15 +22,19 @@
 		"outDir": "./dist/",
 		"baseUrl": "./",
 		"paths": {
-			"@factoryiq/types": ["../types/dist/FactoryIQNodeOutput.d.ts"]
+			"@factoryiq/types": ["../types/dist/FactoryIQNodeOutput.d.ts"],
+			"@vendor": ["vendor/index.js"],
+			"@vendor/*": ["vendor/*"]
 		},
-		"types": ["jest"]
+		"types": ["jest"],
+		"typeRoots": ["./node_modules/@types"]
 	},
 	"include": [
 		"credentials/**/*",
 		"nodes/**/*",
 		"nodes/**/*.json",
 		"package.json",
-		"__tests__/**/*"
-	],
+		"__tests__/**/*",
+		"types.d.ts"
+	]
 }

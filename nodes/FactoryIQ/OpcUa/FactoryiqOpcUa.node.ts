@@ -1,3 +1,4 @@
+import 'module-alias/register';
 import type {
 	IExecuteFunctions,
 	INodeExecutionData,
@@ -8,6 +9,7 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import type { FactoryIQNodeOutput } from './FactoryIQNodeOutput';
+import * as vendor from '@vendor';
 
 export class FactoryiqOpcUa implements INodeType {
 	description: INodeTypeDescription = {
@@ -290,7 +292,7 @@ export class FactoryiqOpcUa implements INodeType {
 			if (!Array.isArray(nodeIds) || nodeIds.length === 0 || !nodeIds[0]) {
 				throw new NodeOperationError(this.getNode(), 'At least one Node ID must be provided for reading.');
 			}
-			const credentials = await this.getCredentials('opcUaCredentials');
+			const credentials = await this.getCredentials('opcUaCredentialsApi');
 			if (!credentials) {
 				throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
 			}
@@ -300,12 +302,11 @@ export class FactoryiqOpcUa implements INodeType {
 			}
 
 			const {
-				OPCUAClient,
 				SecurityPolicy,
 				MessageSecurityMode,
 				UserTokenType,
 				AttributeIds,
-			} = await import('../../../vendor');
+			} = vendor;
 
 			const endpointUrl = credentials.endpointUrl as string;
 			const securityPolicy = (credentials.securityPolicy as string) || 'None';
@@ -373,7 +374,7 @@ export class FactoryiqOpcUa implements INodeType {
 				}
 			}
 
-			const client = OPCUAClient.create(clientOptions);
+			const client = vendor.OPCUAClient.create(clientOptions);
 			let session;
 
 			try {
@@ -461,7 +462,7 @@ export class FactoryiqOpcUa implements INodeType {
 				} else {
 					throw new NodeOperationError(this.getNode(), 'Unsupported operation type.');
 				}
-				const credentials = await this.getCredentials('opcUaCredentials');
+				const credentials = await this.getCredentials('opcUaCredentialsApi');
 				if (!credentials) {
 					throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
 				}
@@ -469,7 +470,7 @@ export class FactoryiqOpcUa implements INodeType {
 				if (authenticationType === 'x509' && (!credentials.certificate || !credentials.privateKey)) {
 					throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 				}
-				const { OPCUAClient, SecurityPolicy, MessageSecurityMode, UserTokenType, DataType } = await import('../../../vendor');
+				const { OPCUAClient, SecurityPolicy, MessageSecurityMode, UserTokenType, DataType } = vendor;
 				const endpointUrl = credentials.endpointUrl as string;
 				const securityPolicy = (credentials.securityPolicy as string) || 'None';
 				const securityMode = (credentials.securityMode as string) || 'None';
@@ -571,7 +572,7 @@ export class FactoryiqOpcUa implements INodeType {
 						const writeValue = FactoryiqOpcUa.convertValueToDataType(value, dataType);
 						const nodesToWrite = [{
 							nodeId,
-							attributeId: (await import('../../../vendor')).AttributeIds.Value,
+							attributeId: vendor.AttributeIds.Value,
 							value: {
 								value: { dataType: dataTypeEnum, value: writeValue },
 							},

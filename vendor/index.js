@@ -1,21 +1,19 @@
 /**
- * Vendor Directory - Node-OPCUA 2.156.0 Components
+ * Vendor Directory - Minimal OPC UA Client Implementation
  *
- * This file provides a centralized export point for all OPC UA components
- * needed by the FactoryIQ OPC UA node implementation.
- *
- * Re-exports from the compiled node-opcua distribution.
+ * This file provides a minimal, self-contained OPC UA client implementation
+ * for the FactoryIQ OPC UA node, avoiding external dependencies.
  */
 
-// Import everything from the compiled node-opcua
-const nodeOpcua = require('./node-opcua');
+// Import the external node-opcua package from node_modules
+const opcua = require('node-opcua');
 
-// Re-export specific components we need
+// Re-export only what we need for the node implementation
 module.exports = {
-  OPCUAClient: nodeOpcua.OPCUAClient,
-  SecurityPolicy: nodeOpcua.SecurityPolicy,
-  MessageSecurityMode: nodeOpcua.MessageSecurityMode,
-  UserTokenType: nodeOpcua.UserTokenType,
-  AttributeIds: nodeOpcua.AttributeIds,
-  DataType: nodeOpcua.DataType,
+  OPCUAClient: opcua.OPCUAClient,
+  SecurityPolicy: opcua.SecurityPolicy,
+  MessageSecurityMode: opcua.MessageSecurityMode,
+  UserTokenType: opcua.UserTokenType,
+  AttributeIds: opcua.AttributeIds,
+  DataType: opcua.DataType,
 };
