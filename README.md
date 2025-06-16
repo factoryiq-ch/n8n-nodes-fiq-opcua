@@ -15,6 +15,24 @@ This n8n community node allows you to connect to OPC UA servers to read and writ
 
 ---
 
+## 🚀 Quick Start
+
+### Installation
+
+Install as a standard n8n custom node package:
+
+```bash
+npm install @fiqch/n8n-nodes-fiq-opcua
+```
+
+For detailed instructions on installing community nodes in n8n, see the official n8n documentation: [Install and manage community nodes](https://docs.n8n.io/integrations/community-nodes/installation/)
+
+### Usage
+
+Import and use this custom node in your n8n instance. See the [n8n documentation](https://docs.n8n.io/) for details on using custom nodes.
+
+---
+
 ## Features
 
 - Read data from one or more OPC UA nodes
@@ -24,66 +42,7 @@ This n8n community node allows you to connect to OPC UA servers to read and writ
 
 ---
 
-## Vendor Integration & Attribution
-
-This package is fully self-contained and does not require the `node-opcua` package as an external dependency. Instead, select client-side functionalities from the [node-opcua](https://github.com/node-opcua/node-opcua) project ([npm](https://www.npmjs.com/package/node-opcua)) are included in a minimal vendor directory for compatibility and long-term maintainability.
-
-**Acknowledgement:**
-- Portions of this package are derived from the open-source [node-opcua](https://github.com/node-opcua/node-opcua) project, which is licensed under the MIT License. We gratefully acknowledge the work of the node-opcua team.
-
-## Vendor Directory Structure
-
-- `vendor/index.js` – Minimal entry point, re-exporting only the OPC UA client symbols required by this package.
-- `vendor/node-opcua/index.js` – Minimal client-only build of node-opcua, stripped of server code and unused features.
-- `vendor/index.d.ts` – Minimal TypeScript declarations for vendor exports.
-
-## Benefits of Self-Contained Approach
-- **No external dependencies**: Reduces attack surface and simplifies deployment.
-- **Smaller package size**: Only the required OPC UA client code is included.
-- **Easier upgrades**: Vendor code can be updated in isolation (see [Upgrade Guide](docs/UPGRADE_VENDOR_OPCUA.md)).
-
-## Installation
-
-Install as a standard n8n custom node package. No additional dependencies are required.
-
-For detailed instructions on installing community nodes in n8n, see the official n8n documentation: [Install and manage community nodes](https://docs.n8n.io/integrations/community-nodes/installation/)
-
-```bash
-npm install @fiqch/n8n-nodes-fiq-opcua
-```
-
-## Upgrade Process
-
-See [docs/UPGRADE_VENDOR_OPCUA.md](docs/UPGRADE_VENDOR_OPCUA.md) for a step-by-step guide to updating the vendor code to a new node-opcua version.
-
-## Troubleshooting
-
-- If you encounter issues related to OPC UA client functionality, ensure the vendor directory is up to date and only contains the minimal required files.
-- For TypeScript errors, check that `vendor/index.d.ts` matches the current exports.
-
-## Usage
-
-Import and use this custom node in your n8n instance. See the [n8n documentation](https://docs.n8n.io/) for details on using custom nodes.
-
-## Development
-
-- Clone the repository
-- Install dependencies: `npm install`
-- Build: `npm run build`
-- Lint: `npm run lint`
-- Test: `npm run test`
-
-## NPM Package
-
-[https://www.npmjs.com/package/@fiqch/n8n-nodes-fiq-opcua](https://www.npmjs.com/package/@fiqch/n8n-nodes-fiq-opcua)
-
-## GitHub Releases
-
-[https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases)
-
----
-
-## Node Parameters
+## Configuration
 
 ### Credentials
 
@@ -103,6 +62,23 @@ Import and use this custom node in your n8n instance. See the [n8n documentation
 - **Object Node ID**: (Writer, Call Method) Node ID of the object
 - **Method Node ID**: (Writer, Call Method) Node ID of the method
 - **Parameters**: (Writer, Call Method) Input arguments for the method
+
+---
+
+## Troubleshooting
+
+- If you encounter issues related to OPC UA client functionality, ensure the vendor directory is up to date and only contains the minimal required files.
+- For TypeScript errors, check that `vendor/index.d.ts` matches the current exports.
+
+---
+
+## Development
+
+- Clone the repository
+- Install dependencies: `npm install`
+- Build: `npm run build`
+- Lint: `npm run lint`
+- Test: `npm run test`
 
 ---
 
@@ -127,6 +103,36 @@ This node requires the [`node-opcua`](https://github.com/node-opcua/node-opcua) 
 
 ---
 
+## Vendor Integration & Attribution
+
+This package is fully self-contained and does not require the `node-opcua` package as an external dependency. Instead, select client-side functionalities from the [node-opcua](https://github.com/node-opcua/node-opcua) project ([npm](https://www.npmjs.com/package/node-opcua)) are included in a minimal vendor directory for compatibility and long-term maintainability.
+
+### Vendor Directory Structure
+
+- `vendor/index.js` – Minimal entry point, re-exporting only the OPC UA client symbols required by this package.
+- `vendor/node-opcua/index.js` – Minimal client-only build of node-opcua, stripped of server code and unused features.
+- `vendor/index.d.ts` – Minimal TypeScript declarations for vendor exports.
+
+### Benefits of Self-Contained Approach
+- **No external dependencies**: Reduces attack surface and simplifies deployment.
+- **Smaller package size**: Only the required OPC UA client code is included.
+- **Easier upgrades**: Vendor code can be updated in isolation (see [Upgrade Guide](docs/UPGRADE_VENDOR_OPCUA.md)).
+
+### Upgrade Process
+
+See [docs/UPGRADE_VENDOR_OPCUA.md](docs/UPGRADE_VENDOR_OPCUA.md) for a step-by-step guide to updating the vendor code to a new node-opcua version.
+
+---
+
+## Resources
+
+- [NPM Package](https://www.npmjs.com/package/@fiqch/n8n-nodes-fiq-opcua)
+- [GitHub Releases](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases)
+- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/#community-nodes)
+- [OPC UA Specification](https://opcfoundation.org/about/opc-technologies/opc-ua/)
+
+---
+
 ## License
 
 MIT
@@ -139,7 +145,7 @@ MIT
 
 ---
 
-## Resources
+## Acknowledgements
 
-- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/#community-nodes)
-- [OPC UA Specification](https://opcfoundation.org/about/opc-technologies/opc-ua/)
+**Acknowledgement:**
+- Portions of this package are derived from the open-source [node-opcua](https://github.com/node-opcua/node-opcua) project, which is licensed under the MIT License. We gratefully acknowledge the work of the node-opcua team.
