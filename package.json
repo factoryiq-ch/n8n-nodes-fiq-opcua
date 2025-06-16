@@ -62,9 +62,7 @@
   "peerDependencies": {
     "n8n-workflow": "*"
   },
-  "dependencies": {
-    "node-opcua": "^2.154.0"
-  },
+  "dependencies": {},
   "publishConfig": {
     "access": "public"
   }

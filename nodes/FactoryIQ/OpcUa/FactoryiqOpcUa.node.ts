@@ -305,7 +305,7 @@ export class FactoryiqOpcUa implements INodeType {
 				MessageSecurityMode,
 				UserTokenType,
 				AttributeIds,
-			} = await import('node-opcua');
+			} = await import('../../../vendor');
 
 			const endpointUrl = credentials.endpointUrl as string;
 			const securityPolicy = (credentials.securityPolicy as string) || 'None';
@@ -469,7 +469,7 @@ export class FactoryiqOpcUa implements INodeType {
 				if (authenticationType === 'x509' && (!credentials.certificate || !credentials.privateKey)) {
 					throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 				}
-				const { OPCUAClient, SecurityPolicy, MessageSecurityMode, UserTokenType, DataType } = await import('node-opcua');
+				const { OPCUAClient, SecurityPolicy, MessageSecurityMode, UserTokenType, DataType } = await import('../../../vendor');
 				const endpointUrl = credentials.endpointUrl as string;
 				const securityPolicy = (credentials.securityPolicy as string) || 'None';
 				const securityMode = (credentials.securityMode as string) || 'None';
@@ -571,7 +571,7 @@ export class FactoryiqOpcUa implements INodeType {
 						const writeValue = FactoryiqOpcUa.convertValueToDataType(value, dataType);
 						const nodesToWrite = [{
 							nodeId,
-							attributeId: (await import('node-opcua')).AttributeIds.Value,
+							attributeId: (await import('../../../vendor')).AttributeIds.Value,
 							value: {
 								value: { dataType: dataTypeEnum, value: writeValue },
 							},

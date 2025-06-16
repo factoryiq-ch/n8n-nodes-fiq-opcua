@@ -1,7 +1,7 @@
 import { FactoryiqOpcUa } from "../nodes/FactoryIQ/OpcUa";
 import type { IExecuteFunctions } from "n8n-workflow";
 
-jest.mock("node-opcua", () => ({
+jest.mock("../vendor", () => ({
   OPCUAClient: {
     create: jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
@@ -45,7 +45,7 @@ function createMockContext(params: Record<string, any>, credentials: any): IExec
 // Helper to set the default node-opcua mock for all session methods
 function setDefaultNodeOpcuaMock() {
   jest.resetModules();
-  jest.doMock("node-opcua", () => ({
+  jest.doMock("../vendor", () => ({
     OPCUAClient: {
       create: jest.fn(() => ({
         connect: jest.fn().mockResolvedValue(undefined),
@@ -145,7 +145,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("handles errors gracefully", async () => {
     // Override the mock to throw
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockRejectedValue(new Error("Connection failed")),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -350,7 +350,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in close/disconnect
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
@@ -386,7 +386,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in close/disconnect
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
@@ -421,7 +421,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in write
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -452,7 +452,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in call
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -501,7 +501,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to return bad status
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -627,7 +627,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
 
   it("reader: result.value is undefined (should return null for metrics and meta.dataType)", async () => {
     // Patch the mock to return result.value as undefined
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -675,7 +675,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     };
     const context = createMockContext(params, credentials);
     // Patch the mock to return different values for each nodeId
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -725,7 +725,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       },
     } as unknown as import("n8n-workflow").IExecuteFunctions;
     // Patch the mock to always return Good
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -964,7 +964,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in close/disconnect
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
@@ -995,7 +995,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to throw in close/disconnect
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
@@ -1022,7 +1022,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to return result with no statusCode
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -1053,7 +1053,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to return result.value.dataType as string
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
@@ -1083,7 +1083,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       authenticationType: "anonymous",
     };
     // Patch the mock to return result.value.dataType as unknown number
-    const nodeOpcua = require("node-opcua");
+    const nodeOpcua = require("../vendor");
     nodeOpcua.OPCUAClient.create = jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),

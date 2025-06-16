@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [Unreleased]
+
+### Features
+- Migrated to a fully self-contained vendor implementation for OPC UA client functionality
+- Removed all external `node-opcua` dependencies; only minimal client code is included in `vendor/`
+- Added concise upgrade guide and documentation for vendor maintenance
+- Updated README with attribution and installation instructions
+
+### Maintenance
+- Cleaned up unused files and server code from vendor directory
+- Validated build, tests, and TypeScript compatibility
+- Ensured package is production-ready and minimal footprint
+
 ### [0.1.10](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.9...v0.1.10) (2025-06-13)
 
 
