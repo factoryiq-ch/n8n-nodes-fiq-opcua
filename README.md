@@ -118,9 +118,7 @@ This package is fully self-contained and does not require the `node-opcua` packa
 - **Smaller package size**: Only the required OPC UA client code is included.
 - **Easier upgrades**: Vendor code can be updated in isolation (see [Upgrade Guide](docs/UPGRADE_VENDOR_OPCUA.md)).
 
-### Upgrade Process
 
-See [docs/UPGRADE_VENDOR_OPCUA.md](docs/UPGRADE_VENDOR_OPCUA.md) for a step-by-step guide to updating the vendor code to a new node-opcua version.
 
 ---
 
