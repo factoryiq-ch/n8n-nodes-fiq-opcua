@@ -7,7 +7,6 @@ All notable changes to this project will be documented in this file. See [standa
 ### Features
 - Migrated to a fully self-contained vendor implementation for OPC UA client functionality
 - Removed all external `node-opcua` dependencies; only minimal client code is included in `vendor/`
-- Added concise upgrade guide and documentation for vendor maintenance
 - Updated README with attribution and installation instructions
 
 ### Maintenance

@@ -374,7 +374,7 @@ export class FactoryiqOpcUa implements INodeType {
 			}
 
 			const client = vendor.OPCUAClient.create(clientOptions);
-			let session;
+			let session: any;
 
 			try {
 				await client.connect(endpointUrl);
@@ -537,7 +537,7 @@ export class FactoryiqOpcUa implements INodeType {
 				}
 
 				const client = OPCUAClient.create(clientOptions);
-				let session;
+				let session: any;
 				try {
 					await client.connect(endpointUrl);
 					let userIdentity: any;
