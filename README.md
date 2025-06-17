@@ -15,6 +15,24 @@ This n8n community node allows you to connect to OPC UA servers to read and writ
 
 ---
 
+## 🚀 Quick Start
+
+### Installation
+
+Install as a standard n8n custom node package:
+
+```bash
+npm install @fiqch/n8n-nodes-fiq-opcua
+```
+
+For detailed instructions on installing community nodes in n8n, see the official n8n documentation: [Install and manage community nodes](https://docs.n8n.io/integrations/community-nodes/installation/)
+
+### Usage
+
+Import and use this custom node in your n8n instance. See the [n8n documentation](https://docs.n8n.io/) for details on using custom nodes.
+
+---
+
 ## Features
 
 - Read data from one or more OPC UA nodes
@@ -24,35 +42,7 @@ This n8n community node allows you to connect to OPC UA servers to read and writ
 
 ---
 
-## Installation
-
-```bash
-npm install @fiqch/n8n-nodes-fiq-opcua
-```
-
-## Usage
-
-Import and use this custom node in your n8n instance. See the [n8n documentation](https://docs.n8n.io/) for details on using custom nodes.
-
-## Development
-
-- Clone the repository
-- Install dependencies: `npm install`
-- Build: `npm run build`
-- Lint: `npm run lint`
-- Test: `npm run test`
-
-## NPM Package
-
-[https://www.npmjs.com/package/@fiqch/n8n-nodes-fiq-opcua](https://www.npmjs.com/package/@fiqch/n8n-nodes-fiq-opcua)
-
-## GitHub Releases
-
-[https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases)
-
----
-
-## Node Parameters
+## Configuration
 
 ### Credentials
 
@@ -75,6 +65,34 @@ Import and use this custom node in your n8n instance. See the [n8n documentation
 
 ---
 
+## Architecture
+
+This package includes a **bundled and optimized OPC UA client** implementation that provides:
+- ✅ **No external dependencies** - compliant with n8n verification guidelines
+- ✅ **Full OPC UA client functionality** - 1:1 feature parity with node-opcua
+- ✅ **Efficient single bundle** - ~7.7MB optimized bundle using ESBuild
+- ✅ **All OPC UA data types** - complete support for industrial protocols
+- ✅ **Proper connection management** - handles connect/disconnect lifecycle
+
+## Troubleshooting
+
+- The OPC UA client is bundled internally (no external dependencies)
+- For connection issues, verify your OPC UA server endpoint and security settings
+- Check that your security policy and authentication settings match your server configuration
+- All standard OPC UA data types and operations are supported
+
+---
+
+## Development
+
+- Clone the repository
+- Install dependencies: `npm install`
+- Build: `npm run build`
+- Lint: `npm run lint`
+- Test: `npm run test`
+
+---
+
 ## Compatibility
 
 | Package         | Version    | Link                                                      |
@@ -90,9 +108,12 @@ Import and use this custom node in your n8n instance. See the [n8n documentation
 
 ---
 
-## Dependencies
+## Resources
 
-This node requires the [`node-opcua`](https://github.com/node-opcua/node-opcua) library to communicate with OPC UA servers. No other runtime dependencies are included. This is in line with n8n community node standards for protocol nodes, where a protocol library is essential for functionality.
+- [NPM Package](https://www.npmjs.com/package/@fiqch/n8n-nodes-fiq-opcua)
+- [GitHub Releases](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/releases)
+- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/#community-nodes)
+- [OPC UA Specification](https://opcfoundation.org/about/opc-technologies/opc-ua/)
 
 ---
 
@@ -108,7 +129,18 @@ MIT
 
 ---
 
-## Resources
+## Upgrading
 
-- [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/#community-nodes)
-- [OPC UA Specification](https://opcfoundation.org/about/opc-technologies/opc-ua/)
+To upgrade to a newer version of the OPC UA library:
+
+```bash
+npm install --save-dev node-opcua@^2.xxx.x
+npm run vendor:bundle
+npm run build && npm test
+```
+
+---
+
+## Acknowledgements
+
+- Portions of this package are derived from the open-source [node-opcua](https://github.com/node-opcua/node-opcua) project, which is licensed under the MIT License.

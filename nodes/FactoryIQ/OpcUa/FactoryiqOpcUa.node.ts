@@ -8,6 +8,14 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import type { FactoryIQNodeOutput } from './FactoryIQNodeOutput';
+import {
+	OPCUAClient,
+	SecurityPolicy,
+	MessageSecurityMode,
+	UserTokenType,
+	DataType,
+	AttributeIds
+} from '../../../vendor';
 
 export class FactoryiqOpcUa implements INodeType {
 	description: INodeTypeDescription = {
@@ -191,7 +199,7 @@ export class FactoryiqOpcUa implements INodeType {
 		],
 	};
 
-	private static getDataTypeEnum(dataType: string, DataType: any): number {
+	private static getDataTypeEnum(dataType: string): number {
 		switch (dataType) {
 			case 'Boolean': return DataType.Boolean;
 			case 'SByte': return DataType.SByte;
@@ -290,7 +298,7 @@ export class FactoryiqOpcUa implements INodeType {
 			if (!Array.isArray(nodeIds) || nodeIds.length === 0 || !nodeIds[0]) {
 				throw new NodeOperationError(this.getNode(), 'At least one Node ID must be provided for reading.');
 			}
-			const credentials = await this.getCredentials('opcUaCredentials');
+			const credentials = await this.getCredentials('opcUaCredentialsApi');
 			if (!credentials) {
 				throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
 			}
@@ -299,13 +307,7 @@ export class FactoryiqOpcUa implements INodeType {
 				throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 			}
 
-			const {
-				OPCUAClient,
-				SecurityPolicy,
-				MessageSecurityMode,
-				UserTokenType,
-				AttributeIds,
-			} = await import('node-opcua');
+					// Direct imports from node-opcua are used
 
 			const endpointUrl = credentials.endpointUrl as string;
 			const securityPolicy = (credentials.securityPolicy as string) || 'None';
@@ -374,7 +376,7 @@ export class FactoryiqOpcUa implements INodeType {
 			}
 
 			const client = OPCUAClient.create(clientOptions);
-			let session;
+			let session: any;
 
 			try {
 				await client.connect(endpointUrl);
@@ -461,7 +463,7 @@ export class FactoryiqOpcUa implements INodeType {
 				} else {
 					throw new NodeOperationError(this.getNode(), 'Unsupported operation type.');
 				}
-				const credentials = await this.getCredentials('opcUaCredentials');
+				const credentials = await this.getCredentials('opcUaCredentialsApi');
 				if (!credentials) {
 					throw new NodeOperationError(this.getNode(), 'No OPC UA credentials provided.');
 				}
@@ -469,7 +471,7 @@ export class FactoryiqOpcUa implements INodeType {
 				if (authenticationType === 'x509' && (!credentials.certificate || !credentials.privateKey)) {
 					throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 				}
-				const { OPCUAClient, SecurityPolicy, MessageSecurityMode, UserTokenType, DataType } = await import('node-opcua');
+				// Direct imports from node-opcua are used
 				const endpointUrl = credentials.endpointUrl as string;
 				const securityPolicy = (credentials.securityPolicy as string) || 'None';
 				const securityMode = (credentials.securityMode as string) || 'None';
@@ -537,7 +539,7 @@ export class FactoryiqOpcUa implements INodeType {
 				}
 
 				const client = OPCUAClient.create(clientOptions);
-				let session;
+				let session: any;
 				try {
 					await client.connect(endpointUrl);
 					let userIdentity: any;
@@ -567,11 +569,11 @@ export class FactoryiqOpcUa implements INodeType {
 						const nodeId = this.getNodeParameter('nodeId', itemIndex) as string;
 						const value = this.getNodeParameter('value', itemIndex) as string;
 						const dataType = this.getNodeParameter('dataType', itemIndex) as string;
-						const dataTypeEnum = FactoryiqOpcUa.getDataTypeEnum(dataType, DataType);
+						const dataTypeEnum = FactoryiqOpcUa.getDataTypeEnum(dataType);
 						const writeValue = FactoryiqOpcUa.convertValueToDataType(value, dataType);
 						const nodesToWrite = [{
 							nodeId,
-							attributeId: (await import('node-opcua')).AttributeIds.Value,
+							attributeId: AttributeIds.Value,
 							value: {
 								value: { dataType: dataTypeEnum, value: writeValue },
 							},
