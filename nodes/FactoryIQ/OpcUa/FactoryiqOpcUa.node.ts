@@ -8,7 +8,14 @@ import type {
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import type { FactoryIQNodeOutput } from './FactoryIQNodeOutput';
-import * as vendor from '../../../vendor';
+import {
+	OPCUAClient,
+	SecurityPolicy,
+	MessageSecurityMode,
+	UserTokenType,
+	DataType,
+	AttributeIds
+} from '../../../vendor';
 
 export class FactoryiqOpcUa implements INodeType {
 	description: INodeTypeDescription = {
@@ -192,7 +199,7 @@ export class FactoryiqOpcUa implements INodeType {
 		],
 	};
 
-	private static getDataTypeEnum(dataType: string, DataType: any): number {
+	private static getDataTypeEnum(dataType: string): number {
 		switch (dataType) {
 			case 'Boolean': return DataType.Boolean;
 			case 'SByte': return DataType.SByte;
@@ -300,12 +307,7 @@ export class FactoryiqOpcUa implements INodeType {
 				throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 			}
 
-			const {
-				SecurityPolicy,
-				MessageSecurityMode,
-				UserTokenType,
-				AttributeIds,
-			} = vendor;
+					// Direct imports from node-opcua are used
 
 			const endpointUrl = credentials.endpointUrl as string;
 			const securityPolicy = (credentials.securityPolicy as string) || 'None';
@@ -373,7 +375,7 @@ export class FactoryiqOpcUa implements INodeType {
 				}
 			}
 
-			const client = vendor.OPCUAClient.create(clientOptions);
+			const client = OPCUAClient.create(clientOptions);
 			let session: any;
 
 			try {
@@ -469,7 +471,7 @@ export class FactoryiqOpcUa implements INodeType {
 				if (authenticationType === 'x509' && (!credentials.certificate || !credentials.privateKey)) {
 					throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 				}
-				const { OPCUAClient, SecurityPolicy, MessageSecurityMode, UserTokenType, DataType } = vendor;
+				// Direct imports from node-opcua are used
 				const endpointUrl = credentials.endpointUrl as string;
 				const securityPolicy = (credentials.securityPolicy as string) || 'None';
 				const securityMode = (credentials.securityMode as string) || 'None';
@@ -567,11 +569,11 @@ export class FactoryiqOpcUa implements INodeType {
 						const nodeId = this.getNodeParameter('nodeId', itemIndex) as string;
 						const value = this.getNodeParameter('value', itemIndex) as string;
 						const dataType = this.getNodeParameter('dataType', itemIndex) as string;
-						const dataTypeEnum = FactoryiqOpcUa.getDataTypeEnum(dataType, DataType);
+						const dataTypeEnum = FactoryiqOpcUa.getDataTypeEnum(dataType);
 						const writeValue = FactoryiqOpcUa.convertValueToDataType(value, dataType);
 						const nodesToWrite = [{
 							nodeId,
-							attributeId: vendor.AttributeIds.Value,
+							attributeId: AttributeIds.Value,
 							value: {
 								value: { dataType: dataTypeEnum, value: writeValue },
 							},

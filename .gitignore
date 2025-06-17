@@ -1,10 +1,16 @@
-node_modules
+dist/
+node_modules/
+*.tsbuildinfo
+.vscode/
 .DS_Store
-.tmp
-tmp
-dist
-!vendor/**/dist
+coverage/
+.env
+
+# Keep vendor after bundling
+!vendor/
+
+# Temporary files from bundling
+../temp-opcua-entry.js
+
 npm-debug.log*
 yarn.lock
-.vscode/
-coverage/

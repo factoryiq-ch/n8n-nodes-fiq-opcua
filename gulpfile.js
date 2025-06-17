@@ -1,7 +1,8 @@
 const path = require('path');
 const { task, src, dest, series } = require('gulp');
 
-task('copy:vendor', copyVendor);
+task('copyIcons', copyIcons);
+task('copyVendor', copyVendor);
 task('build:icons', series(copyIcons, copyVendor));
 
 task('default', series('build:icons'));

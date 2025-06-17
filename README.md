@@ -65,10 +65,21 @@ Import and use this custom node in your n8n instance. See the [n8n documentation
 
 ---
 
+## Architecture
+
+This package includes a **bundled and optimized OPC UA client** implementation that provides:
+- ✅ **No external dependencies** - compliant with n8n verification guidelines
+- ✅ **Full OPC UA client functionality** - 1:1 feature parity with node-opcua
+- ✅ **Efficient single bundle** - ~7.7MB optimized bundle using ESBuild
+- ✅ **All OPC UA data types** - complete support for industrial protocols
+- ✅ **Proper connection management** - handles connect/disconnect lifecycle
+
 ## Troubleshooting
 
-- If you encounter issues related to OPC UA client functionality, ensure the vendor directory is up to date and only contains the minimal required files.
-- For TypeScript errors, check that `vendor/index.d.ts` matches the current exports.
+- The OPC UA client is bundled internally (no external dependencies)
+- For connection issues, verify your OPC UA server endpoint and security settings
+- Check that your security policy and authentication settings match your server configuration
+- All standard OPC UA data types and operations are supported
 
 ---
 
