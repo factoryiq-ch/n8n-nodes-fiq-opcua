@@ -129,7 +129,18 @@ MIT
 
 ---
 
+## Upgrading
+
+To upgrade to a newer version of the OPC UA library:
+
+```bash
+npm install --save-dev node-opcua@^2.xxx.x
+npm run vendor:bundle
+npm run build && npm test
+```
+
+---
+
 ## Acknowledgements
 
-**Acknowledgement:**
-- Portions of this package are derived from the open-source [node-opcua](https://github.com/node-opcua/node-opcua) project, which is licensed under the MIT License. We gratefully acknowledge the work of the node-opcua team.
+- Portions of this package are derived from the open-source [node-opcua](https://github.com/node-opcua/node-opcua) project, which is licensed under the MIT License.
