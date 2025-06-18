@@ -1,4 +1,5 @@
 import { FactoryiqOpcUa } from "../nodes/FactoryIQ/OpcUa";
+import { OpcUaConnectionPool } from "../nodes/FactoryIQ/OpcUa/ConnectionPool";
 import type { IExecuteFunctions } from "n8n-workflow";
 
 jest.mock('../vendor', () => ({
@@ -18,6 +19,8 @@ jest.mock('../vendor', () => ({
           { statusCode: { name: 'Good' }, outputArguments: [{ value: 'Hello' }] },
         ]),
         close: jest.fn().mockResolvedValue(undefined),
+        isChannelValid: jest.fn().mockReturnValue(true),
+        isReconnecting: false,
       }),
     })),
   },
@@ -1142,5 +1145,224 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     const result = await node.execute.call(context);
     const meta = (result[0][0].json.meta ?? {}) as Record<string, any>;
     expect(meta.dataType).toBeNull();
+  });
+
+  describe("Connection Pool Integration", () => {
+    beforeEach(() => {
+      // Reset the singleton instance before each test
+      (OpcUaConnectionPool as any).instance = undefined;
+      setDefaultNodeOpcuaMock();
+    });
+
+    it("should use connection pool for read operations", async () => {
+      const poolSpy = jest.spyOn(OpcUaConnectionPool, 'getInstance');
+      const node = new FactoryiqOpcUa();
+      const params = {
+        operation: "read",
+        nodeIds: ["ns=1;s=TestVariable"],
+      };
+      const credentials = {
+        endpointUrl: "opc.tcp://localhost:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      };
+      const context = createMockContext(params, credentials);
+
+      await node.execute.call(context);
+
+      expect(poolSpy).toHaveBeenCalled();
+    });
+
+    it("should use connection pool for write operations", async () => {
+      const poolSpy = jest.spyOn(OpcUaConnectionPool, 'getInstance');
+      const node = new FactoryiqOpcUa();
+      const params = {
+        operation: "write",
+        writeOperation: "writeVariable",
+        nodeId: "ns=1;s=WritableVariable",
+        value: "123.45",
+        dataType: "Double",
+      };
+      const credentials = {
+        endpointUrl: "opc.tcp://localhost:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      };
+      const context = createMockContext(params, credentials);
+
+      await node.execute.call(context);
+
+      expect(poolSpy).toHaveBeenCalled();
+    });
+
+    it("should reuse connections across multiple executions", async () => {
+      const node = new FactoryiqOpcUa();
+      const params = {
+        operation: "read",
+        nodeIds: ["ns=1;s=TestVariable"],
+      };
+      const credentials = {
+        endpointUrl: "opc.tcp://localhost:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      };
+      const context = createMockContext(params, credentials);
+
+      // First execution
+      await node.execute.call(context);
+
+      // Get the pool instance and check it has connections
+      const pool = OpcUaConnectionPool.getInstance();
+      const poolState = (pool as any).pools;
+      expect(poolState.size).toBe(1);
+
+      // Second execution should reuse the connection
+      await node.execute.call(context);
+
+      // Should still have the same connection
+      expect(poolState.size).toBe(1);
+    });
+
+    it("should create separate pools for different credentials", async () => {
+      const node = new FactoryiqOpcUa();
+      const params = {
+        operation: "read",
+        nodeIds: ["ns=1;s=TestVariable"],
+      };
+      const credentials1 = {
+        endpointUrl: "opc.tcp://localhost:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      };
+      const credentials2 = {
+        endpointUrl: "opc.tcp://localhost:4841",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      };
+      const context1 = createMockContext(params, credentials1);
+      const context2 = createMockContext(params, credentials2);
+
+      // Execute with first credentials
+      await node.execute.call(context1);
+
+      // Execute with second credentials
+      await node.execute.call(context2);
+
+      // Should have separate pools for different endpoints
+      const pool = OpcUaConnectionPool.getInstance();
+      const poolState = (pool as any).pools;
+      expect(poolState.size).toBe(2);
+    });
+
+    it("should handle pool failures gracefully by falling back", async () => {
+      const node = new FactoryiqOpcUa();
+      const params = {
+        operation: "read",
+        nodeIds: ["ns=1;s=TestVariable"],
+      };
+      const credentials = {
+        endpointUrl: "opc.tcp://localhost:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      };
+      const context = createMockContext(params, credentials);
+
+      // Mock pool to throw error
+      const poolMock = {
+        getConnection: jest.fn().mockRejectedValue(new Error("Pool failed")),
+        releaseConnection: jest.fn(),
+      };
+      jest.spyOn(OpcUaConnectionPool, 'getInstance').mockReturnValue(poolMock as any);
+
+      // Should throw error wrapped by NodeOperationError
+      await expect(node.execute.call(context)).rejects.toThrow("Failed to connect or authenticate to OPC UA server");
+    });
+
+    it("should release connections back to pool after successful operations", async () => {
+      const node = new FactoryiqOpcUa();
+      const params = {
+        operation: "read",
+        nodeIds: ["ns=1;s=TestVariable"],
+      };
+      const credentials = {
+        endpointUrl: "opc.tcp://localhost:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      };
+      const context = createMockContext(params, credentials);
+
+      const releaseConnectionSpy = jest.fn();
+      const poolMock = {
+        getConnection: jest.fn().mockResolvedValue({
+          client: {
+            connect: jest.fn().mockResolvedValue(undefined),
+            disconnect: jest.fn().mockResolvedValue(undefined),
+          },
+          session: {
+            read: jest.fn().mockResolvedValue([
+              { statusCode: { name: 'Good' }, value: { value: 42, dataType: 'Double' } },
+            ]),
+            close: jest.fn().mockResolvedValue(undefined),
+            isChannelValid: jest.fn().mockReturnValue(true),
+            isReconnecting: false,
+          },
+          inUse: true,
+          key: "test-key"
+        }),
+        releaseConnection: releaseConnectionSpy,
+      };
+      jest.spyOn(OpcUaConnectionPool, 'getInstance').mockReturnValue(poolMock as any);
+
+      await node.execute.call(context);
+
+      expect(releaseConnectionSpy).toHaveBeenCalled();
+    });
+
+    it("should release connections back to pool after failed operations", async () => {
+      const node = new FactoryiqOpcUa();
+      const params = {
+        operation: "read",
+        nodeIds: ["ns=1;s=TestVariable"],
+      };
+      const credentials = {
+        endpointUrl: "opc.tcp://localhost:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      };
+      const context = createMockContext(params, credentials);
+
+      const releaseConnectionSpy = jest.fn();
+      const poolMock = {
+        getConnection: jest.fn().mockResolvedValue({
+          client: {
+            connect: jest.fn().mockResolvedValue(undefined),
+            disconnect: jest.fn().mockResolvedValue(undefined),
+          },
+          session: {
+            read: jest.fn().mockRejectedValue(new Error("Read failed")),
+            close: jest.fn().mockResolvedValue(undefined),
+            isChannelValid: jest.fn().mockReturnValue(true),
+            isReconnecting: false,
+          },
+          inUse: true,
+          key: "test-key"
+        }),
+        releaseConnection: releaseConnectionSpy,
+      };
+      jest.spyOn(OpcUaConnectionPool, 'getInstance').mockReturnValue(poolMock as any);
+
+      await expect(node.execute.call(context)).rejects.toThrow("Failed to read node values");
+
+      // Should still release connection even after error
+      expect(releaseConnectionSpy).toHaveBeenCalled();
+    });
   });
 });

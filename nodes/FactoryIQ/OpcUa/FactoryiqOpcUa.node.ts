@@ -9,13 +9,10 @@ import type {
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import type { FactoryIQNodeOutput } from './FactoryIQNodeOutput';
 import {
-	OPCUAClient,
-	SecurityPolicy,
-	MessageSecurityMode,
-	UserTokenType,
 	DataType,
 	AttributeIds
 } from '../../../vendor';
+import { OpcUaConnectionPool } from './ConnectionPool';
 
 export class FactoryiqOpcUa implements INodeType {
 	description: INodeTypeDescription = {
@@ -287,6 +284,8 @@ export class FactoryiqOpcUa implements INodeType {
 		25: 'DiagnosticInfo',
 	};
 
+
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const results: INodeExecutionData[] = [];
@@ -307,100 +306,18 @@ export class FactoryiqOpcUa implements INodeType {
 				throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 			}
 
-					// Direct imports from node-opcua are used
-
-			const endpointUrl = credentials.endpointUrl as string;
-			const securityPolicy = (credentials.securityPolicy as string) || 'None';
-			const securityMode = (credentials.securityMode as string) || 'None';
-
-			let securityPolicyEnum;
-			let securityModeEnum;
-
-			switch (securityPolicy) {
-				case 'Basic256Sha256':
-					securityPolicyEnum = SecurityPolicy.Basic256Sha256;
-					break;
-				case 'Basic256':
-					securityPolicyEnum = SecurityPolicy.Basic256;
-					break;
-				case 'Basic128Rsa15':
-					securityPolicyEnum = SecurityPolicy.Basic128Rsa15;
-					break;
-				case 'Aes128_Sha256_RsaOaep':
-					securityPolicyEnum = SecurityPolicy.Aes128_Sha256_RsaOaep;
-					break;
-				case 'Aes256_Sha256_RsaPss':
-					securityPolicyEnum = SecurityPolicy.Aes256_Sha256_RsaPss;
-					break;
-				default:
-					securityPolicyEnum = SecurityPolicy.None;
-			}
-
-			switch (securityMode) {
-				case 'Sign':
-					securityModeEnum = MessageSecurityMode.Sign;
-					break;
-				case 'SignAndEncrypt':
-				case 'Sign & Encrypt':
-					securityModeEnum = MessageSecurityMode.SignAndEncrypt;
-					break;
-				default:
-					securityModeEnum = MessageSecurityMode.None;
-			}
-
-			const randomSuffix = Math.random().toString(36).substring(2, 10);
-			const clientName = `n8n-opcua-${randomSuffix}`;
-			const clientOptions: any = {
-				securityPolicy: securityPolicyEnum,
-				securityMode: securityModeEnum,
-				connectionStrategy: {
-					initialDelay: 1000,
-					maxRetry: 3,
-					maxDelay: 10000,
-				},
-				clientName,
-				requestedSessionTimeout: 60000,
-				endpointMustExist: false,
-				securityOptions: {
-					rejectUnauthorized: false
-				}
-			};
-
-			if (authenticationType === 'x509') {
-				if (credentials.certificate && credentials.privateKey) {
-					clientOptions.certificateData = Buffer.from(credentials.certificate as string);
-					clientOptions.privateKeyData = Buffer.from(credentials.privateKey as string);
-				} else {
-					throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
-				}
-			}
-
-			const client = OPCUAClient.create(clientOptions);
-			let session: any;
-
+			// Get pooled connection
+			let client: any, session: any, pooledConnection: any;
 			try {
-				await client.connect(endpointUrl);
-				let userIdentity: any;
-				if (authenticationType === 'usernamePassword') {
-					userIdentity = {
-						type: UserTokenType.UserName,
-						userName: credentials.username,
-						password: credentials.password,
-					};
-				} else if (authenticationType === 'x509') {
-					userIdentity = {
-						type: UserTokenType.Certificate,
-						certificateData: credentials.certificate,
-						privateKey: credentials.privateKey,
-					};
-				} else {
-					userIdentity = undefined;
-				}
-				session = await client.createSession(userIdentity);
+				const pool = OpcUaConnectionPool.getInstance();
+				pooledConnection = await pool.getConnection(credentials);
+				client = pooledConnection.client;
+				session = pooledConnection.session;
 			} catch (error) {
-				await client.disconnect().catch(() => {});
+				// Pool failed, fall back to direct connection (current behavior)
 				throw new NodeOperationError(this.getNode(), error, { message: 'Failed to connect or authenticate to OPC UA server.' });
 			}
+			const clientName = pooledConnection ? `n8n-opcua-pool` : `n8n-opcua-${Math.random().toString(36).substring(2, 10)}`;
 
 			try {
 				const nodesToRead = nodeIds.map(nodeId => ({
@@ -438,12 +355,19 @@ export class FactoryiqOpcUa implements INodeType {
 			} catch (error) {
 				throw new NodeOperationError(this.getNode(), error, { message: 'Failed to read node values.' });
 			} finally {
-				try {
-					if (session) {
-						await session.close();
-					}
-					await client.disconnect();
-				} catch (error) {}
+				if (pooledConnection) {
+					// Release connection back to pool
+					const pool = OpcUaConnectionPool.getInstance();
+					pool.releaseConnection(pooledConnection);
+				} else {
+					// Direct connection - clean up as before
+					try {
+						if (session) {
+							await session.close();
+						}
+						await client.disconnect();
+					} catch (error) {}
+				}
 			}
 			return [results];
 		} else if (operation === 'write') {
@@ -471,98 +395,19 @@ export class FactoryiqOpcUa implements INodeType {
 				if (authenticationType === 'x509' && (!credentials.certificate || !credentials.privateKey)) {
 					throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
 				}
-				// Direct imports from node-opcua are used
-				const endpointUrl = credentials.endpointUrl as string;
-				const securityPolicy = (credentials.securityPolicy as string) || 'None';
-				const securityMode = (credentials.securityMode as string) || 'None';
 
-				let securityPolicyEnum;
-				let securityModeEnum;
-
-				switch (securityPolicy) {
-					case 'Basic256Sha256':
-						securityPolicyEnum = SecurityPolicy.Basic256Sha256;
-						break;
-					case 'Basic256':
-						securityPolicyEnum = SecurityPolicy.Basic256;
-						break;
-					case 'Basic128Rsa15':
-						securityPolicyEnum = SecurityPolicy.Basic128Rsa15;
-						break;
-					case 'Aes128_Sha256_RsaOaep':
-						securityPolicyEnum = SecurityPolicy.Aes128_Sha256_RsaOaep;
-						break;
-					case 'Aes256_Sha256_RsaPss':
-						securityPolicyEnum = SecurityPolicy.Aes256_Sha256_RsaPss;
-						break;
-					default:
-						securityPolicyEnum = SecurityPolicy.None;
-				}
-
-				switch (securityMode) {
-					case 'Sign':
-						securityModeEnum = MessageSecurityMode.Sign;
-						break;
-					case 'SignAndEncrypt':
-					case 'Sign & Encrypt':
-						securityModeEnum = MessageSecurityMode.SignAndEncrypt;
-						break;
-					default:
-						securityModeEnum = MessageSecurityMode.None;
-				}
-
-				const randomSuffix = Math.random().toString(36).substring(2, 10);
-				const clientName = `n8n-opcua-${randomSuffix}`;
-				const clientOptions: any = {
-					securityPolicy: securityPolicyEnum,
-					securityMode: securityModeEnum,
-					connectionStrategy: {
-						initialDelay: 1000,
-						maxRetry: 3,
-						maxDelay: 10000,
-					},
-					clientName,
-					requestedSessionTimeout: 60000,
-					endpointMustExist: false,
-					securityOptions: {
-						rejectUnauthorized: false
-					}
-				};
-
-				if (authenticationType === 'x509') {
-					if (credentials.certificate && credentials.privateKey) {
-						clientOptions.certificateData = Buffer.from(credentials.certificate as string);
-						clientOptions.privateKeyData = Buffer.from(credentials.privateKey as string);
-					} else {
-						throw new NodeOperationError(this.getNode(), 'X509 authentication requires both certificate and private key.');
-					}
-				}
-
-				const client = OPCUAClient.create(clientOptions);
-				let session: any;
+				// Get pooled connection
+				let client: any, session: any, pooledConnection: any;
 				try {
-					await client.connect(endpointUrl);
-					let userIdentity: any;
-					if (authenticationType === 'usernamePassword') {
-						userIdentity = {
-							type: UserTokenType.UserName,
-							userName: credentials.username,
-							password: credentials.password,
-						};
-					} else if (authenticationType === 'x509') {
-						userIdentity = {
-							type: UserTokenType.Certificate,
-							certificateData: credentials.certificate,
-							privateKey: credentials.privateKey,
-						};
-					} else {
-						userIdentity = undefined;
-					}
-					session = await client.createSession(userIdentity);
+					const pool = OpcUaConnectionPool.getInstance();
+					pooledConnection = await pool.getConnection(credentials);
+					client = pooledConnection.client;
+					session = pooledConnection.session;
 				} catch (error) {
-					await client.disconnect().catch(() => {});
+					// Pool failed, fall back to direct connection (current behavior)
 					throw new NodeOperationError(this.getNode(), error, { message: 'Failed to connect or authenticate to OPC UA server.' });
 				}
+				const clientName = pooledConnection ? `n8n-opcua-pool` : `n8n-opcua-${Math.random().toString(36).substring(2, 10)}`;
 
 				try {
 					if (writeOperation === 'writeVariable') {
@@ -627,12 +472,19 @@ export class FactoryiqOpcUa implements INodeType {
 				} catch (error) {
 					throw new NodeOperationError(this.getNode(), error, { message: 'Failed to execute operation on OPC UA node.' });
 				} finally {
-					try {
-						if (session) {
-							await session.close();
-						}
-						await client.disconnect();
-					} catch (error) {}
+					if (pooledConnection) {
+						// Release connection back to pool
+						const pool = OpcUaConnectionPool.getInstance();
+						pool.releaseConnection(pooledConnection);
+					} else {
+						// Direct connection - clean up as before
+						try {
+							if (session) {
+								await session.close();
+							}
+							await client.disconnect();
+						} catch (error) {}
+					}
 				}
 			}
 			return [results];

@@ -23,7 +23,7 @@ jobs:
       - name: Set up git user for CI
         run: |
           git config user.name "FactoryIQ CI"
-          git config user.email "noreply@factoryiq.ch"
+          git config user.email "noreply@factoryiq.io"
 
       - name: Use Node.js
         uses: actions/setup-node@v4
