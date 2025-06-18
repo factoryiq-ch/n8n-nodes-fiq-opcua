@@ -125,7 +125,7 @@ MIT
 
 ## Maintainer
 
-[FactoryIQ](https://factoryiq.ch)
+[FactoryIQ](https://factoryiq.io)
 
 ---
 
