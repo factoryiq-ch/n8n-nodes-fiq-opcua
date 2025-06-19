@@ -284,8 +284,6 @@ export class FactoryiqOpcUa implements INodeType {
 		25: 'DiagnosticInfo',
 	};
 
-
-
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const results: INodeExecutionData[] = [];
