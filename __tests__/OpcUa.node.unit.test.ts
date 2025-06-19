@@ -372,9 +372,6 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockRejectedValue(new Error("disconnect error")),
       createSession: jest.fn().mockResolvedValue({
-        readVariableValue: jest.fn().mockResolvedValue([
-          { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
-        ]),
         read: jest.fn().mockResolvedValue([
           { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } }
         ]),
@@ -761,7 +758,7 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     // Patch getInputData to return two items
     const context = {
       ...createMockContext(params, credentials),
-      getInputData: () => [{}, {}],
+      getInputData: () => [{ json: {} }, { json: {} }], // Two items with proper structure
       getNodeParameter: (name: string, itemIndex: number) => {
         if (name === "nodeId") return itemIndex === 0 ? "ns=1;s=WritableVariable1" : "ns=1;s=WritableVariable2";
         if (name === "value") return itemIndex === 0 ? "123.45" : "678.90";
@@ -1364,5 +1361,210 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
       // Should still release connection even after error
       expect(releaseConnectionSpy).toHaveBeenCalled();
     });
+  });
+
+  it("should have credential test method", () => {
+    const node = new FactoryiqOpcUa();
+    expect(node.methods).toBeDefined();
+    expect(node.methods.credentialTest).toBeDefined();
+    expect(node.methods.credentialTest.opcUaConnectionTest).toBeDefined();
+    expect(typeof node.methods.credentialTest.opcUaConnectionTest).toBe('function');
+  });
+
+  it("should test credentials successfully", async () => {
+    const node = new FactoryiqOpcUa();
+    const mockCredential = {
+      data: {
+        endpointUrl: "opc.tcp://localhost:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      }
+    };
+
+    // Mock this context for credential testing
+    const mockThis = {} as any;
+
+    const result = await node.methods.credentialTest.opcUaConnectionTest.call(mockThis, mockCredential);
+    expect(result).toBeDefined();
+    expect(result.status).toBe('OK');
+    expect(result.message).toBe('Connection successful!');
+  });
+
+  it("should handle credential test errors", async () => {
+    // Reset modules to ensure clean mock state and force connection failure
+    jest.resetModules();
+    jest.doMock('../vendor', () => ({
+      OPCUAClient: {
+        create: jest.fn(() => {
+          throw new Error("Connection failed");
+        }),
+      },
+      SecurityPolicy: { None: "None", Basic128Rsa15: "Basic128Rsa15", Basic256: "Basic256", Basic256Sha256: "Basic256Sha256", Aes128_Sha256_RsaOaep: "Aes128_Sha256_RsaOaep", Aes256_Sha256_RsaPss: "Aes256_Sha256_RsaPss" },
+      MessageSecurityMode: { None: "None", Sign: "Sign", SignAndEncrypt: "SignAndEncrypt" },
+      UserTokenType: { UserName: "UserName", Certificate: "Certificate" },
+      DataType: { Double: "Double", String: "String", Boolean: "Boolean", SByte: "SByte", Byte: "Byte", Int16: "Int16", UInt16: "UInt16", Int32: "Int32", UInt32: "UInt32", Int64: "Int64", UInt64: "UInt64", Float: "Float", DateTime: "DateTime", Guid: "Guid", ByteString: "ByteString" },
+      AttributeIds: { Value: 13 },
+    }));
+
+    // Re-import the module with new mock
+    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
+    const node = new FactoryiqOpcUa();
+
+    const mockCredential = {
+      data: {
+        endpointUrl: "opc.tcp://invalid-server:4840",
+        securityPolicy: "None",
+        securityMode: "None",
+        authenticationType: "anonymous",
+      }
+    };
+
+    const mockThis = {} as any;
+    const result = await node.methods.credentialTest.opcUaConnectionTest.call(mockThis, mockCredential);
+    expect(result).toBeDefined();
+    expect(result.status).toBe('Error');
+    expect(result.message).toContain('Failed to connect to OPC UA server');
+  });
+});
+
+// Additional tests for branch coverage
+describe("FactoryIQ OpcUA Node - Branch Coverage", () => {
+  beforeEach(() => {
+    setDefaultNodeOpcuaMock();
+  });
+
+  it("should handle empty nodeIds array", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: [],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).rejects.toThrow("At least one Node ID must be provided for reading.");
+  });
+
+  it("should handle missing nodeId in write operation", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "writeVariable",
+      nodeId: "",
+      dataType: "Double",
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).rejects.toThrow("Node ID and Data Type are required for variable write.");
+  });
+
+  it("should handle missing dataType in write operation", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "write",
+      writeOperation: "writeVariable",
+      nodeId: "ns=1;s=TestVariable",
+      dataType: "",
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "anonymous",
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).rejects.toThrow("Node ID and Data Type are required for variable write.");
+  });
+
+  it("should test getDataTypeEnum with default case", () => {
+    // Access private static method for testing
+    const getDataTypeEnum = (FactoryiqOpcUa as any).getDataTypeEnum;
+    expect(getDataTypeEnum('UnknownType')).toBe('String'); // Should return default
+  });
+
+  it("should test convertValueToDataType Boolean conversions", () => {
+    const convertValueToDataType = (FactoryiqOpcUa as any).convertValueToDataType;
+
+    // Test true cases
+    expect(convertValueToDataType('true', 'Boolean')).toBe(true);
+    expect(convertValueToDataType('1', 'Boolean')).toBe(true);
+    expect(convertValueToDataType('on', 'Boolean')).toBe(true);
+    expect(convertValueToDataType('yes', 'Boolean')).toBe(true);
+
+    // Test false cases
+    expect(convertValueToDataType('false', 'Boolean')).toBe(false);
+    expect(convertValueToDataType('0', 'Boolean')).toBe(false);
+    expect(convertValueToDataType('random', 'Boolean')).toBe(false);
+  });
+
+  it("should test convertValueToDataType numeric clamping", () => {
+    const convertValueToDataType = (FactoryiqOpcUa as any).convertValueToDataType;
+
+    // Test SByte clamping
+    expect(convertValueToDataType('200', 'SByte')).toBe(127); // Clamped to max
+    expect(convertValueToDataType('-200', 'SByte')).toBe(-128); // Clamped to min
+
+    // Test Byte clamping
+    expect(convertValueToDataType('300', 'Byte')).toBe(255); // Clamped to max
+    expect(convertValueToDataType('-10', 'Byte')).toBe(0); // Clamped to min
+
+    // Test with invalid numbers
+    expect(convertValueToDataType('abc', 'Int32')).toBe(0);
+    expect(convertValueToDataType('abc', 'Float')).toBe(0.0);
+  });
+
+  it("should test convertValueToDataType special types", () => {
+    const convertValueToDataType = (FactoryiqOpcUa as any).convertValueToDataType;
+
+    // Test DateTime
+    const dateValue = convertValueToDataType('2023-01-01', 'DateTime');
+    expect(dateValue).toBeInstanceOf(Date);
+
+    // Test ByteString
+    const bufferValue = convertValueToDataType('test', 'ByteString');
+    expect(Buffer.isBuffer(bufferValue)).toBe(true);
+
+    // Test default case
+    expect(convertValueToDataType('test', 'UnknownType')).toBe('test');
+  });
+
+  it("should handle x509 authentication without certificate", async () => {
+    const node = new FactoryiqOpcUa();
+    const params = {
+      operation: "read",
+      nodeIds: ["ns=1;s=TestVariable"],
+    };
+    const credentials = {
+      endpointUrl: "opc.tcp://localhost:4840",
+      securityPolicy: "None",
+      securityMode: "None",
+      authenticationType: "x509",
+      // Missing certificate and privateKey
+    };
+    const context = createMockContext(params, credentials);
+    await expect(node.execute.call(context)).rejects.toThrow("X509 authentication requires both certificate and private key.");
+  });
+
+  it("should test opcuaDataTypeMap coverage", () => {
+    // Access the private static property
+    const opcuaDataTypeMap = (FactoryiqOpcUa as any).opcuaDataTypeMap;
+
+    // Test known mappings
+    expect(opcuaDataTypeMap[1]).toBe('Boolean');
+    expect(opcuaDataTypeMap[12]).toBe('String');
+    expect(opcuaDataTypeMap[11]).toBe('Double');
+
+    // Test unmapped number
+    expect(opcuaDataTypeMap[999]).toBeUndefined();
   });
 });

@@ -5,6 +5,8 @@ import type {
 	INodeTypeDescription,
 	Icon,
 	IDataObject,
+	ICredentialTestFunctions,
+	INodeCredentialTestResult,
 } from 'n8n-workflow';
 import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
 import type { FactoryIQNodeOutput } from './FactoryIQNodeOutput';
@@ -32,6 +34,7 @@ export class FactoryiqOpcUa implements INodeType {
 			{
 				name: 'opcUaCredentialsApi',
 				required: true,
+				testedBy: 'opcUaConnectionTest',
 			},
 		],
 		properties: [
@@ -194,6 +197,35 @@ export class FactoryiqOpcUa implements INodeType {
 				],
 			},
 		],
+	};
+
+	methods = {
+		credentialTest: {
+			async opcUaConnectionTest(this: ICredentialTestFunctions, credential: any): Promise<INodeCredentialTestResult> {
+				const credentials = credential.data;
+
+				try {
+					// Use the connection pool to test the connection
+					const pool = OpcUaConnectionPool.getInstance();
+					const pooledConnection = await pool.getConnection(credentials);
+
+					// If we get here, the connection was successful
+					// Release the connection back to the pool
+					pool.releaseConnection(pooledConnection);
+
+					return {
+						status: 'OK',
+						message: 'Connection successful!',
+					};
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : 'Unknown connection error';
+					return {
+						status: 'Error',
+						message: `Failed to connect to OPC UA server: ${errorMessage}`,
+					};
+				}
+			},
+		},
 	};
 
 	private static getDataTypeEnum(dataType: string): number {
