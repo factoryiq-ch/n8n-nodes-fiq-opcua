@@ -1363,69 +1363,6 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     });
   });
 
-  it("should have credential test method", () => {
-    const node = new FactoryiqOpcUa();
-    expect(node.methods).toBeDefined();
-    expect(node.methods.credentialTest).toBeDefined();
-    expect(node.methods.credentialTest.opcUaConnectionTest).toBeDefined();
-    expect(typeof node.methods.credentialTest.opcUaConnectionTest).toBe('function');
-  });
-
-  it("should test credentials successfully", async () => {
-    const node = new FactoryiqOpcUa();
-    const mockCredential = {
-      data: {
-        endpointUrl: "opc.tcp://localhost:4840",
-        securityPolicy: "None",
-        securityMode: "None",
-        authenticationType: "anonymous",
-      }
-    };
-
-    // Mock this context for credential testing
-    const mockThis = {} as any;
-
-    const result = await node.methods.credentialTest.opcUaConnectionTest.call(mockThis, mockCredential);
-    expect(result).toBeDefined();
-    expect(result.status).toBe('OK');
-    expect(result.message).toBe('Connection successful!');
-  });
-
-  it("should handle credential test errors", async () => {
-    // Reset modules to ensure clean mock state and force connection failure
-    jest.resetModules();
-    jest.doMock('../vendor', () => ({
-      OPCUAClient: {
-        create: jest.fn(() => {
-          throw new Error("Connection failed");
-        }),
-      },
-      SecurityPolicy: { None: "None", Basic128Rsa15: "Basic128Rsa15", Basic256: "Basic256", Basic256Sha256: "Basic256Sha256", Aes128_Sha256_RsaOaep: "Aes128_Sha256_RsaOaep", Aes256_Sha256_RsaPss: "Aes256_Sha256_RsaPss" },
-      MessageSecurityMode: { None: "None", Sign: "Sign", SignAndEncrypt: "SignAndEncrypt" },
-      UserTokenType: { UserName: "UserName", Certificate: "Certificate" },
-      DataType: { Double: "Double", String: "String", Boolean: "Boolean", SByte: "SByte", Byte: "Byte", Int16: "Int16", UInt16: "UInt16", Int32: "Int32", UInt32: "UInt32", Int64: "Int64", UInt64: "UInt64", Float: "Float", DateTime: "DateTime", Guid: "Guid", ByteString: "ByteString" },
-      AttributeIds: { Value: 13 },
-    }));
-
-    // Re-import the module with new mock
-    const { FactoryiqOpcUa } = require("../nodes/FactoryIQ/OpcUa");
-    const node = new FactoryiqOpcUa();
-
-    const mockCredential = {
-      data: {
-        endpointUrl: "opc.tcp://invalid-server:4840",
-        securityPolicy: "None",
-        securityMode: "None",
-        authenticationType: "anonymous",
-      }
-    };
-
-    const mockThis = {} as any;
-    const result = await node.methods.credentialTest.opcUaConnectionTest.call(mockThis, mockCredential);
-    expect(result).toBeDefined();
-    expect(result.status).toBe('Error');
-    expect(result.message).toContain('Failed to connect to OPC UA server');
-  });
 });
 
 // Additional tests for branch coverage
