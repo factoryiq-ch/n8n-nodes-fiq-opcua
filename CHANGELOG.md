@@ -2,17 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [Unreleased]
+### [0.1.12](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.9...v0.1.12) (2025-06-18)
+
 
 ### Features
-- Migrated to a fully self-contained vendor implementation for OPC UA client functionality
-- Removed all external `node-opcua` dependencies; only minimal client code is included in `vendor/`
-- Updated README with attribution and installation instructions
 
-### Maintenance
-- Cleaned up unused files and server code from vendor directory
-- Validated build, tests, and TypeScript compatibility
-- Ensured package is production-ready and minimal footprint
+* implement proper release workflow with post-merge tagging ([c83911d](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/c83911df77c18878d67fcc6541c2b638bcde63d7))
+
+
+### Code Refactoring
+
+* merge publish-tag into release workflow for KISS simplicity ([18558ec](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/18558ec6fc6b1855ccf40e115b40b026e0cf243e))
+
+
+### Chores
+
+* **release:** 0.1.10 ([ef1ce22](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/ef1ce220869f12f1a9ce8f34e3ca12a465b415fd))
+* **release:** 0.1.11 ([f13c3f6](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/f13c3f635357b3f3e1e09abb3b0418e4bdbbd654))
 
 ### [0.1.11](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.9...v0.1.11) (2025-06-13)
 
