@@ -17,11 +17,11 @@ describe('OpcUaCredentialsApi', () => {
   });
 
   it('should have correct displayName', () => {
-    expect(credentials.displayName).toBe('OPC UA API');
+    expect(credentials.displayName).toBe('FactoryIQ OPC UA Credentials API');
   });
 
   it('should have correct documentationUrl', () => {
-    expect(credentials.documentationUrl).toBe('https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/blob/main/docs/opcua-credential.md');
+    expect(credentials.documentationUrl).toBe('https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua?tab=readme-ov-file#configuration');
   });
 
   it('should have correct icon', () => {
