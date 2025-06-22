@@ -1,15 +1,15 @@
 import { OpcUaConnectionPool } from "../nodes/FactoryIQ/OpcUa/ConnectionPool";
 
-// Mock the vendor module
+// Mock the vendor module with comprehensive mock objects
 jest.mock('../vendor', () => ({
   OPCUAClient: {
     create: jest.fn(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
       createSession: jest.fn().mockResolvedValue({
+        close: jest.fn().mockResolvedValue(undefined),
         isChannelValid: jest.fn().mockReturnValue(true),
         isReconnecting: false,
-        close: jest.fn().mockResolvedValue(undefined),
       }),
     })),
   },
@@ -19,21 +19,23 @@ jest.mock('../vendor', () => ({
     Basic256: 'Basic256',
     Basic256Sha256: 'Basic256Sha256',
     Aes128_Sha256_RsaOaep: 'Aes128_Sha256_RsaOaep',
-    Aes256_Sha256_RsaPss: 'Aes256_Sha256_RsaPss'
+    Aes256_Sha256_RsaPss: 'Aes256_Sha256_RsaPss',
   },
   MessageSecurityMode: {
     None: 'None',
     Sign: 'Sign',
-    SignAndEncrypt: 'SignAndEncrypt'
+    SignAndEncrypt: 'SignAndEncrypt',
   },
   UserTokenType: {
     UserName: 'UserName',
-    Certificate: 'Certificate'
+    Certificate: 'Certificate',
   },
 }));
 
 describe("OpcUaConnectionPool", () => {
   let pool: OpcUaConnectionPool;
+  let mockVendor: any;
+
   const mockCredentials = {
     endpointUrl: "opc.tcp://localhost:4840",
     securityPolicy: "None",
@@ -48,22 +50,32 @@ describe("OpcUaConnectionPool", () => {
     authenticationType: "anonymous",
   };
 
-    beforeEach(() => {
-    // Reset the singleton instance before each test
-    (OpcUaConnectionPool as any).instance = undefined;
-    pool = OpcUaConnectionPool.getInstance();
-    jest.clearAllMocks();
+      beforeEach(() => {
+      // Reset the singleton instance before each test
+      (OpcUaConnectionPool as any).instance = undefined;
+      pool = OpcUaConnectionPool.getInstance();
+      mockVendor = require('../vendor');
+      jest.clearAllMocks();
 
-    // Reset to default mock behavior that creates new instances each time
-    require('../vendor').OPCUAClient.create.mockImplementation(() => ({
-      connect: jest.fn().mockResolvedValue(undefined),
-      disconnect: jest.fn().mockResolvedValue(undefined),
-      createSession: jest.fn().mockResolvedValue({
-        isChannelValid: jest.fn().mockReturnValue(true),
-        isReconnecting: false,
-        close: jest.fn().mockResolvedValue(undefined),
-      }),
-    }));
+      // Reset to default successful behavior
+      mockVendor.OPCUAClient.create.mockImplementation(() => ({
+        connect: jest.fn().mockResolvedValue(undefined),
+        disconnect: jest.fn().mockResolvedValue(undefined),
+        createSession: jest.fn().mockResolvedValue({
+          close: jest.fn().mockResolvedValue(undefined),
+          isChannelValid: jest.fn().mockReturnValue(true),
+          isReconnecting: false,
+        }),
+      }));
+    });
+
+  afterEach(async () => {
+    try {
+      await pool.shutdown();
+    } catch (error) {
+      // Ignore cleanup errors in tests
+    }
+    (OpcUaConnectionPool as any).instance = undefined;
   });
 
   describe("Singleton Pattern", () => {
@@ -98,7 +110,7 @@ describe("OpcUaConnectionPool", () => {
       expect(connection.key).toBeDefined();
     });
 
-        it("should create connections for different credentials", async () => {
+    it("should create connections for different credentials", async () => {
       const connection1 = await pool.getConnection(mockCredentials);
       const connection2 = await pool.getConnection(mockCredentials2);
 
@@ -141,7 +153,7 @@ describe("OpcUaConnectionPool", () => {
       expect(connection2.inUse).toBe(true);
     });
 
-        it("should not reuse connection that is still in use", async () => {
+    it("should not reuse connection that is still in use", async () => {
       const connection1 = await pool.getConnection(mockCredentials);
       // Don't release connection1
 
@@ -154,7 +166,7 @@ describe("OpcUaConnectionPool", () => {
       pool.releaseConnection(connection2);
     });
 
-        it("should find available connection among multiple connections", async () => {
+    it("should find available connection among multiple connections", async () => {
       const connection1 = await pool.getConnection(mockCredentials);
       const connection2 = await pool.getConnection(mockCredentials);
       const connection3 = await pool.getConnection(mockCredentials);
@@ -173,7 +185,7 @@ describe("OpcUaConnectionPool", () => {
   });
 
   describe("Pool Size Limits", () => {
-        it("should create up to 3 connections per credential", async () => {
+    it("should create up to 3 connections per credential", async () => {
       const connection1 = await pool.getConnection(mockCredentials);
       const connection2 = await pool.getConnection(mockCredentials);
       const connection3 = await pool.getConnection(mockCredentials);
@@ -188,7 +200,7 @@ describe("OpcUaConnectionPool", () => {
       pool.releaseConnection(connection3);
     });
 
-        it("should reuse first connection when pool is full", async () => {
+    it("should reuse first connection when pool is full", async () => {
       const connection1 = await pool.getConnection(mockCredentials);
       const connection2 = await pool.getConnection(mockCredentials);
       const connection3 = await pool.getConnection(mockCredentials);
@@ -297,7 +309,7 @@ describe("OpcUaConnectionPool", () => {
       expect(connection2).toBeDefined();
     });
 
-        it("should skip reconnecting sessions", async () => {
+    it("should skip reconnecting sessions", async () => {
       const mockSession = {
         isChannelValid: jest.fn().mockReturnValue(true),
         isReconnecting: true, // This should be skipped
@@ -312,7 +324,7 @@ describe("OpcUaConnectionPool", () => {
 
       require('../vendor').OPCUAClient.create.mockImplementation(() => mockClient);
 
-            const connection1 = await pool.getConnection(mockCredentials);
+      const connection1 = await pool.getConnection(mockCredentials);
       pool.releaseConnection(connection1);
 
       // Create a different mock for the second connection
@@ -466,5 +478,329 @@ describe("OpcUaConnectionPool", () => {
       pool.releaseConnection(connection);
       expect(connection.inUse).toBe(false);
     });
+  });
+
+  it('should create a new connection when pool is empty', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'anonymous',
+    };
+
+    const connection = await pool.getConnection(credentials);
+
+    expect(connection).toBeDefined();
+    expect(connection.inUse).toBe(true);
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalled();
+  });
+
+  it('should reuse available connection', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'anonymous',
+    };
+
+    // Get first connection and release it
+    const connection1 = await pool.getConnection(credentials);
+    pool.releaseConnection(connection1);
+
+    // Get second connection - should reuse the first
+    const connection2 = await pool.getConnection(credentials);
+
+    expect(connection1).toBe(connection2);
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalledTimes(1); // Only called once
+  });
+
+  it('should handle session validation failure and remove invalid connection', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'anonymous',
+    };
+
+    // Create a connection first
+    const connection1 = await pool.getConnection(credentials);
+    pool.releaseConnection(connection1);
+
+    // Mock the session to be invalid on next check
+    connection1.session.isChannelValid = jest.fn(() => {
+      throw new Error('Session validation failed');
+    });
+
+    // Get connection again - should create new one due to invalid session
+    const connection2 = await pool.getConnection(credentials);
+
+    expect(connection2).not.toBe(connection1);
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalledTimes(2); // Called twice due to invalid session
+  });
+
+
+
+  it('should handle reconnecting session', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'anonymous',
+    };
+
+    // Create a connection first
+    const connection1 = await pool.getConnection(credentials);
+    pool.releaseConnection(connection1);
+
+    // Mock the session to be reconnecting
+    connection1.session.isReconnecting = true;
+
+    // Get connection again - should create new one due to reconnecting session
+    const connection2 = await pool.getConnection(credentials);
+
+    expect(connection2).not.toBe(connection1);
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalledTimes(2);
+  });
+
+     it('should limit pool size to 3 connections and reuse first when full', async () => {
+     const credentials = {
+       endpointUrl: 'opc.tcp://localhost:4840',
+       authenticationType: 'anonymous',
+     };
+
+     // Create 3 connections
+     const conn1 = await pool.getConnection(credentials);
+     await pool.getConnection(credentials); // conn2
+     await pool.getConnection(credentials); // conn3
+
+     // 4th connection should reuse the first one
+     const conn4 = await pool.getConnection(credentials);
+
+     expect(conn4).toBe(conn1);
+     expect(mockVendor.OPCUAClient.create).toHaveBeenCalledTimes(3); // Only 3 new connections created
+   });
+
+  it('should handle connection creation failure', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://invalid-server',
+      authenticationType: 'anonymous',
+    };
+
+    // Mock connection failure
+    mockVendor.OPCUAClient.create.mockReturnValueOnce({
+      connect: jest.fn().mockRejectedValue(new Error('Connection failed')),
+      disconnect: jest.fn().mockResolvedValue(undefined),
+    });
+
+    await expect(pool.getConnection(credentials)).rejects.toThrow('Connection failed');
+  });
+
+  it('should create different pools for different credentials', async () => {
+    const credentials1 = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'anonymous',
+    };
+
+    const credentials2 = {
+      endpointUrl: 'opc.tcp://localhost:4841',
+      authenticationType: 'anonymous',
+    };
+
+    const conn1 = await pool.getConnection(credentials1);
+    const conn2 = await pool.getConnection(credentials2);
+
+    expect(conn1).not.toBe(conn2);
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('should handle username/password authentication', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'usernamePassword',
+      username: 'testuser',
+      password: 'testpass',
+    };
+
+    const connection = await pool.getConnection(credentials);
+
+    expect(connection).toBeDefined();
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalled();
+  });
+
+  it('should handle x509 authentication with valid certificate', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'x509',
+      certificate: 'test-cert-data',
+      privateKey: 'test-key-data',
+    };
+
+    const connection = await pool.getConnection(credentials);
+
+    expect(connection).toBeDefined();
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        certificateData: expect.any(Buffer),
+        privateKeyData: expect.any(Buffer),
+      })
+    );
+  });
+
+  it('should throw error for x509 authentication without certificate or private key', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'x509',
+      // Missing certificate and privateKey
+    };
+
+    await expect(pool.getConnection(credentials)).rejects.toThrow(
+      'X509 authentication requires both certificate and private key.'
+    );
+  });
+
+  it('should handle all security policies', async () => {
+    const policies = ['Basic256Sha256', 'Basic256', 'Basic128Rsa15', 'Aes128_Sha256_RsaOaep', 'Aes256_Sha256_RsaPss', 'None'];
+
+    for (const policy of policies) {
+      const credentials = {
+        endpointUrl: `opc.tcp://localhost:484${policies.indexOf(policy)}`,
+        authenticationType: 'anonymous',
+        securityPolicy: policy,
+      };
+
+      const connection = await pool.getConnection(credentials);
+      expect(connection).toBeDefined();
+    }
+  });
+
+  it('should handle all security modes', async () => {
+    const modes = ['Sign', 'SignAndEncrypt', 'Sign & Encrypt', 'None'];
+
+    for (const mode of modes) {
+      const credentials = {
+        endpointUrl: `opc.tcp://localhost:485${modes.indexOf(mode)}`,
+        authenticationType: 'anonymous',
+        securityMode: mode,
+      };
+
+      const connection = await pool.getConnection(credentials);
+      expect(connection).toBeDefined();
+    }
+  });
+
+  it('should release connection properly', () => {
+    const mockConnection = {
+      client: {},
+      session: {},
+      inUse: true,
+      key: 'test-key',
+    };
+
+    pool.releaseConnection(mockConnection);
+
+    expect(mockConnection.inUse).toBe(false);
+  });
+
+  it('should handle null connection in releaseConnection', () => {
+    // Should not throw error
+    expect(() => pool.releaseConnection(null as any)).not.toThrow();
+  });
+
+     it('should shutdown gracefully and cleanup all connections', async () => {
+     const credentials = {
+       endpointUrl: 'opc.tcp://localhost:4840',
+       authenticationType: 'anonymous',
+     };
+
+     // Create some connections
+     await pool.getConnection(credentials);
+     await pool.getConnection(credentials);
+
+     // Mock session and client with close/disconnect methods
+     const mockSession = { close: jest.fn().mockResolvedValue(undefined) };
+     const mockClient = { disconnect: jest.fn().mockResolvedValue(undefined) };
+
+     // Access the private pools property to set up proper mocks
+     const pools = (pool as any).pools;
+     for (const [, connections] of pools.entries()) {
+       connections.forEach((conn: any) => {
+         conn.session = mockSession;
+         conn.client = mockClient;
+       });
+     }
+
+     await pool.shutdown();
+
+     expect(mockSession.close).toHaveBeenCalled();
+     expect(mockClient.disconnect).toHaveBeenCalled();
+   });
+
+     it('should handle errors during shutdown gracefully', async () => {
+     const credentials = {
+       endpointUrl: 'opc.tcp://localhost:4840',
+       authenticationType: 'anonymous',
+     };
+
+     // Create a connection
+     await pool.getConnection(credentials);
+
+     // Mock session and client to throw errors on cleanup
+     const mockSession = { close: jest.fn().mockRejectedValue(new Error('Close failed')) };
+     const mockClient = { disconnect: jest.fn().mockRejectedValue(new Error('Disconnect failed')) };
+
+     // Access the private pools property to set up proper mocks
+     const pools = (pool as any).pools;
+     for (const [, connections] of pools.entries()) {
+       connections.forEach((conn: any) => {
+         conn.session = mockSession;
+         conn.client = mockClient;
+       });
+     }
+
+     // Should not throw errors during shutdown
+     await expect(pool.shutdown()).resolves.toBeUndefined();
+   });
+
+  it('should create proper client name with random suffix', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'anonymous',
+    };
+
+    await pool.getConnection(credentials);
+
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientName: expect.stringMatching(/^n8n-opcua-pool-[a-z0-9]{8}$/)
+      })
+    );
+  });
+
+  it('should handle missing session in connection during validation', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'anonymous',
+    };
+
+    // Create a connection first
+    const connection1 = await pool.getConnection(credentials);
+    pool.releaseConnection(connection1);
+
+    // Remove the session to simulate a corrupted connection
+    connection1.session = null;
+
+    // Get connection again - should create new one due to missing session
+    const connection2 = await pool.getConnection(credentials);
+
+    expect(connection2).not.toBe(connection1);
+    expect(mockVendor.OPCUAClient.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('should handle session creation failure', async () => {
+    const credentials = {
+      endpointUrl: 'opc.tcp://localhost:4840',
+      authenticationType: 'anonymous',
+    };
+
+    // Mock session creation failure
+    mockVendor.OPCUAClient.create.mockReturnValueOnce({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn().mockResolvedValue(undefined),
+      createSession: jest.fn().mockRejectedValue(new Error('Session creation failed')),
+    });
+
+    await expect(pool.getConnection(credentials)).rejects.toThrow('Session creation failed');
   });
 });
