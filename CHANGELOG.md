@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.15](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.9...v0.1.15) (2025-06-23)
+
+
+### Features
+
+* implement proper release workflow with post-merge tagging ([c83911d](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/c83911df77c18878d67fcc6541c2b638bcde63d7))
+
+
+### Code Refactoring
+
+* merge publish-tag into release workflow for KISS simplicity ([18558ec](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/18558ec6fc6b1855ccf40e115b40b026e0cf243e))
+
+
+### Chores
+
+* **release:** 0.1.10 ([ef1ce22](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/ef1ce220869f12f1a9ce8f34e3ca12a465b415fd))
+* **release:** 0.1.11 ([f13c3f6](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/f13c3f635357b3f3e1e09abb3b0418e4bdbbd654))
+* **release:** 0.1.12 ([985b7cd](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/985b7cd73257559fd0203ca3e26896902aa6e04e))
+* **release:** 0.1.13 ([9aed93e](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/9aed93e8733d43a439595eae879f871714bacf3a))
+* **release:** 0.1.14 ([cb54d63](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/commit/cb54d63ef9fd7220849e0a3d05e5f9bd077d533f))
+
 ### [0.1.14](https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/compare/v0.1.9...v0.1.14) (2025-06-22)
 
 
