@@ -703,8 +703,8 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
           disconnect: jest.fn().mockResolvedValue(undefined),
           createSession: jest.fn().mockResolvedValue({
             read: jest.fn().mockResolvedValue([
-              { statusCode: { name: "Good" }, value: { value: 42, dataType: "Double" } },
-              { statusCode: { name: "Good" }, value: { value: 99, dataType: "Double" } },
+              { statusCode: { name: "Good" }, value: { value: 42, dataType: 7 } }, // DataType.Double = 11, but using 7 for UInt32 from opcuaDataTypeMap
+              { statusCode: { name: "Good" }, value: { value: 99, dataType: 7 } },
             ]),
             close: jest.fn().mockResolvedValue(undefined),
           }),
@@ -732,12 +732,23 @@ describe("FactoryIQ OpcUA Node (unit, with mocks)", () => {
     };
     const context = createMockContext(params, credentials);
     const result = await node.execute.call(context);
-    const metrics0 = (result[0][0].json.metrics ?? {}) as Record<string, any>;
-    const metrics1 = (result[0][1].json.metrics ?? {}) as Record<string, any>;
-    expect(metrics0["ns=1;s=TestVariable1"]).toBe(42);
-    expect(metrics1["ns=1;s=TestVariable2"]).toBe(99);
-    expect(result[0][0].json.status).toBe("Good");
-    expect(result[0][1].json.status).toBe("Good");
+
+    // NEW: Expect single consolidated output instead of separate outputs
+    expect(result[0]).toHaveLength(1); // Only one output object
+    const output = result[0][0].json;
+    const metrics = (output.metrics ?? {}) as Record<string, any>;
+    const meta = (output.meta ?? {}) as Record<string, any>;
+
+    // Check that both node values are in the same metrics object
+    expect(metrics["ns=1;s=TestVariable1"]).toBe(42);
+    expect(metrics["ns=1;s=TestVariable2"]).toBe(99);
+
+    // Check consolidated status and meta
+    expect(output.status).toBe("Good");
+    expect(meta.nodeCount).toBe(2);
+    expect(meta.nodeIds).toEqual(["ns=1;s=TestVariable1", "ns=1;s=TestVariable2"]);
+    expect(meta.dataTypes["ns=1;s=TestVariable1"]).toBe("UInt32");
+    expect(meta.dataTypes["ns=1;s=TestVariable2"]).toBe("UInt32");
   });
 
   it("returns correct output for multiple items in Writer mode (writeVariable)", async () => {
