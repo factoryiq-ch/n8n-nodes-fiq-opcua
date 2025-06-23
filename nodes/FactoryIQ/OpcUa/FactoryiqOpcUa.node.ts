@@ -359,33 +359,55 @@ export class FactoryiqOpcUa implements INodeType {
 					attributeId: AttributeIds.Value,
 				}));
 				const readResults = await session.read(nodesToRead);
+
+								// Create consolidated output for multiple node IDs
+				const metrics: Record<string, any> = {};
+				const metaDataTypes: Record<string, any> = {};
+				const errors: Record<string, string> = {};
+				let overallStatus = 'Good';
+				const timestamp = Date.now();
+
 				for (let i = 0; i < nodeIds.length; i++) {
 					const nodeId = nodeIds[i];
 					const result = readResults[i];
+
 					if (result.statusCode && result.statusCode.name !== 'Good') {
-						const output: FactoryIQNodeOutput = {
-							timestamp: Date.now(),
-							source: clientName,
-							protocol: 'opcua',
-							address: nodeId,
-							metrics: { [nodeId]: null },
-							status: result.statusCode.name,
-							meta: { error: result.statusCode.name },
-						};
-						results.push({ json: output as unknown as IDataObject });
+						metrics[nodeId] = null;
+						errors[nodeId] = result.statusCode.name;
+						// For single node, use the actual error status; for multiple nodes, use 'Partial'
+						overallStatus = nodeIds.length === 1 ? result.statusCode.name : 'Partial';
 					} else {
-						const output: FactoryIQNodeOutput = {
-							timestamp: Date.now(),
-							source: clientName,
-							protocol: 'opcua',
-							address: nodeId,
-							metrics: { [nodeId]: result.value ? result.value.value : null },
-							status: 'Good',
-							meta: { dataType: (result.value && typeof result.value.dataType === 'number' && FactoryiqOpcUa.opcuaDataTypeMap[result.value.dataType] !== undefined) ? FactoryiqOpcUa.opcuaDataTypeMap[result.value.dataType] : null },
-						};
-						results.push({ json: output as unknown as IDataObject });
+						metrics[nodeId] = result.value ? result.value.value : null;
+						if (result.value && typeof result.value.dataType === 'number' && FactoryiqOpcUa.opcuaDataTypeMap[result.value.dataType] !== undefined) {
+							metaDataTypes[nodeId] = FactoryiqOpcUa.opcuaDataTypeMap[result.value.dataType];
+						}
 					}
 				}
+
+				// Create single consolidated output
+				const output: FactoryIQNodeOutput = {
+					timestamp,
+					source: clientName,
+					protocol: 'opcua',
+					address: nodeIds.length === 1 ? nodeIds[0] : `${nodeIds.length} nodes`,
+					metrics,
+					status: overallStatus,
+					meta: nodeIds.length === 1
+						? {
+							// For single node, maintain backward compatibility
+							dataType: metaDataTypes[nodeIds[0]] || null,
+							...(Object.keys(errors).length > 0 && { error: errors[nodeIds[0]] })
+						}
+						: {
+							// For multiple nodes, use new key-value structure
+							dataTypes: metaDataTypes,
+							...(Object.keys(errors).length > 0 && { errors }),
+							nodeCount: nodeIds.length,
+							nodeIds: nodeIds
+						},
+				};
+
+				results.push({ json: output as unknown as IDataObject });
 			} catch (error) {
 				throw new NodeOperationError(this.getNode(), error, { message: 'Failed to read node values.' });
 			} finally {
