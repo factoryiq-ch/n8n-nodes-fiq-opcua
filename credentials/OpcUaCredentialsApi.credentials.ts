@@ -6,8 +6,8 @@ import {
 
 export class OpcUaCredentialsApi implements ICredentialType {
 	name = 'opcUaCredentialsApi';
-	displayName = 'OPC UA API';
-	documentationUrl = 'https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/blob/main/docs/opcua-credential.md';
+	displayName = 'FactoryIQ OPC UA Account API';
+	documentationUrl = 'https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua?tab=readme-ov-file#configuration';
 	icon = 'file:FactoryIQ.svg' as Icon;
 
 	properties: INodeProperties[] = [

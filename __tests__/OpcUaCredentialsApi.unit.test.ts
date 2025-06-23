@@ -1,10 +1,47 @@
 import { OpcUaCredentialsApi } from '../credentials/OpcUaCredentialsApi.credentials';
+import { FactoryiqOpcUa } from '../nodes/FactoryIQ/OpcUa/FactoryiqOpcUa.node';
+import type { ICredentialTestFunctions } from 'n8n-workflow';
+
+// Mock the vendor module
+jest.mock('../vendor', () => {
+  const mockClient = {
+    connect: jest.fn().mockResolvedValue(undefined),
+    disconnect: jest.fn().mockResolvedValue(undefined),
+    createSession: jest.fn().mockResolvedValue({
+      close: jest.fn().mockResolvedValue(undefined),
+    }),
+  };
+
+  return {
+    OPCUAClient: {
+      create: jest.fn(() => mockClient),
+    },
+    SecurityPolicy: {
+      None: 'None',
+      Basic128Rsa15: 'Basic128Rsa15',
+      Basic256: 'Basic256',
+      Basic256Sha256: 'Basic256Sha256',
+      Aes128_Sha256_RsaOaep: 'Aes128_Sha256_RsaOaep',
+      Aes256_Sha256_RsaPss: 'Aes256_Sha256_RsaPss',
+    },
+    MessageSecurityMode: {
+      None: 'None',
+      Sign: 'Sign',
+      SignAndEncrypt: 'SignAndEncrypt',
+    },
+    UserTokenType: {
+      UserName: 'UserName',
+      Certificate: 'Certificate',
+    },
+  };
+});
 
 describe('OpcUaCredentialsApi', () => {
   let credentials: OpcUaCredentialsApi;
 
   beforeEach(() => {
     credentials = new OpcUaCredentialsApi();
+    jest.clearAllMocks();
   });
 
   it('should be defined and instantiable', () => {
@@ -17,11 +54,11 @@ describe('OpcUaCredentialsApi', () => {
   });
 
   it('should have correct displayName', () => {
-    expect(credentials.displayName).toBe('OPC UA API');
+    expect(credentials.displayName).toBe('FactoryIQ OPC UA Account API');
   });
 
   it('should have correct documentationUrl', () => {
-    expect(credentials.documentationUrl).toBe('https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua/blob/main/docs/opcua-credential.md');
+    expect(credentials.documentationUrl).toBe('https://github.com/factoryiq-ch/n8n-nodes-fiq-opcua?tab=readme-ov-file#configuration');
   });
 
   it('should have correct icon', () => {
@@ -169,5 +206,335 @@ describe('OpcUaCredentialsApi', () => {
     const propertyNames = credentials.properties.map(p => p.name);
     const uniqueNames = [...new Set(propertyNames)];
     expect(propertyNames.length).toBe(uniqueNames.length);
+  });
+
+  describe('opcuaConnectionTest', () => {
+    let opcuaNode: FactoryiqOpcUa;
+    let mockCredentialTestFunctions: jest.Mocked<ICredentialTestFunctions>;
+    let mockVendor: any;
+    let mockClient: any;
+
+    beforeEach(() => {
+      opcuaNode = new FactoryiqOpcUa();
+      mockCredentialTestFunctions = {} as jest.Mocked<ICredentialTestFunctions>;
+      mockVendor = require('../vendor');
+      mockClient = {
+        connect: jest.fn().mockResolvedValue(undefined),
+        disconnect: jest.fn().mockResolvedValue(undefined),
+        createSession: jest.fn().mockResolvedValue({
+          close: jest.fn().mockResolvedValue(undefined),
+        }),
+      };
+      mockVendor.OPCUAClient.create.mockReturnValue(mockClient);
+      jest.clearAllMocks();
+    });
+
+    const testCredential = (data: any) => ({ data });
+
+    it('should return error when no credentials provided', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential(null)
+      );
+
+      expect(result).toEqual({
+        status: 'Error',
+        message: 'No credentials provided.',
+      });
+    });
+
+    it('should return error when endpointUrl is empty', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({ endpointUrl: '' })
+      );
+
+      expect(result).toEqual({
+        status: 'Error',
+        message: 'Endpoint URL is required and cannot be empty.',
+      });
+    });
+
+    it('should return error when endpointUrl is whitespace only', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({ endpointUrl: '   ' })
+      );
+
+      expect(result).toEqual({
+        status: 'Error',
+        message: 'Endpoint URL is required and cannot be empty.',
+      });
+    });
+
+    it('should return error when endpointUrl has invalid format', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({ endpointUrl: 'http://localhost:4840' })
+      );
+
+      expect(result).toEqual({
+        status: 'Error',
+        message: 'Endpoint URL must start with opc.tcp:// or opc.https://. Received: "http://localhost:4840"',
+      });
+    });
+
+    it('should successfully test connection with anonymous authentication', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          securityPolicy: 'None',
+          securityMode: 'None',
+          authenticationType: 'anonymous',
+        })
+      );
+
+      expect(mockVendor.OPCUAClient.create).toHaveBeenCalledWith({
+        securityPolicy: 'None',
+        securityMode: 'None',
+        connectionStrategy: { initialDelay: 1000, maxRetry: 1, maxDelay: 2000 },
+        clientName: 'n8n-opcua-credential-test',
+        requestedSessionTimeout: 10000,
+        endpointMustExist: false,
+        securityOptions: { rejectUnauthorized: false },
+      });
+      expect(mockClient.connect).toHaveBeenCalledWith('opc.tcp://localhost:4840');
+      expect(mockClient.createSession).toHaveBeenCalledWith(undefined);
+      expect(result).toEqual({
+        status: 'OK',
+        message: 'Connection successful!',
+      });
+    });
+
+    it('should successfully test connection with username/password authentication', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          securityPolicy: 'Basic256Sha256',
+          securityMode: 'Sign',
+          authenticationType: 'usernamePassword',
+          username: 'testuser',
+          password: 'testpass',
+        })
+      );
+
+      expect(mockVendor.OPCUAClient.create).toHaveBeenCalledWith({
+        securityPolicy: 'Basic256Sha256',
+        securityMode: 'Sign',
+        connectionStrategy: { initialDelay: 1000, maxRetry: 1, maxDelay: 2000 },
+        clientName: 'n8n-opcua-credential-test',
+        requestedSessionTimeout: 10000,
+        endpointMustExist: false,
+        securityOptions: { rejectUnauthorized: false },
+      });
+      expect(mockClient.createSession).toHaveBeenCalledWith({
+        type: 'UserName',
+        userName: 'testuser',
+        password: 'testpass',
+      });
+      expect(result).toEqual({
+        status: 'OK',
+        message: 'Connection successful!',
+      });
+    });
+
+    it('should successfully test connection with x509 authentication', async () => {
+      const testCert = '-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----';
+      const testKey = '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----';
+
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          securityPolicy: 'Basic256',
+          securityMode: 'SignAndEncrypt',
+          authenticationType: 'x509',
+          certificate: testCert,
+          privateKey: testKey,
+        })
+      );
+
+      expect(mockVendor.OPCUAClient.create).toHaveBeenCalledWith({
+        securityPolicy: 'Basic256',
+        securityMode: 'SignAndEncrypt',
+        connectionStrategy: { initialDelay: 1000, maxRetry: 1, maxDelay: 2000 },
+        clientName: 'n8n-opcua-credential-test',
+        requestedSessionTimeout: 10000,
+        endpointMustExist: false,
+        securityOptions: { rejectUnauthorized: false },
+        certificateData: Buffer.from(testCert),
+        privateKeyData: Buffer.from(testKey),
+      });
+      expect(mockClient.createSession).toHaveBeenCalledWith({
+        type: 'Certificate',
+        certificateData: testCert,
+        privateKey: testKey,
+      });
+      expect(result).toEqual({
+        status: 'OK',
+        message: 'Connection successful!',
+      });
+    });
+
+    it('should return error for x509 authentication without certificate', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          authenticationType: 'x509',
+          privateKey: 'test-key',
+        })
+      );
+
+      expect(result.status).toBe('Error');
+      expect(result.message).toContain('X509 authentication requires both certificate and private key');
+    });
+
+    it('should return error for x509 authentication without private key', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          authenticationType: 'x509',
+          certificate: 'test-cert',
+        })
+      );
+
+      expect(result.status).toBe('Error');
+      expect(result.message).toContain('X509 authentication requires both certificate and private key');
+    });
+
+    it('should test all security policies', async () => {
+      const policies = ['Basic128Rsa15', 'Basic256', 'Basic256Sha256', 'Aes128_Sha256_RsaOaep', 'Aes256_Sha256_RsaPss'];
+
+      for (const policy of policies) {
+        await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+          mockCredentialTestFunctions,
+          testCredential({
+            endpointUrl: 'opc.tcp://localhost:4840',
+            securityPolicy: policy,
+            securityMode: 'None',
+            authenticationType: 'anonymous',
+          })
+        );
+
+        expect(mockVendor.OPCUAClient.create).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            securityPolicy: policy,
+          })
+        );
+      }
+    });
+
+    it('should test all security modes', async () => {
+      const modes = ['Sign', 'SignAndEncrypt', 'Sign & Encrypt'];
+      const expectedModes = ['Sign', 'SignAndEncrypt', 'SignAndEncrypt'];
+
+      for (let i = 0; i < modes.length; i++) {
+        await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+          mockCredentialTestFunctions,
+          testCredential({
+            endpointUrl: 'opc.tcp://localhost:4840',
+            securityPolicy: 'None',
+            securityMode: modes[i],
+            authenticationType: 'anonymous',
+          })
+        );
+
+        expect(mockVendor.OPCUAClient.create).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            securityMode: expectedModes[i],
+          })
+        );
+      }
+    });
+
+    it('should handle connection errors gracefully', async () => {
+      mockClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
+
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          authenticationType: 'anonymous',
+        })
+      );
+
+      expect(result).toEqual({
+        status: 'Error',
+        message: 'Connection failed',
+      });
+    });
+
+    it('should handle session creation errors gracefully', async () => {
+      mockClient.createSession.mockRejectedValueOnce(new Error('Session creation failed'));
+
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          authenticationType: 'anonymous',
+        })
+      );
+
+      expect(result).toEqual({
+        status: 'Error',
+        message: 'Session creation failed',
+      });
+    });
+
+    it('should disconnect client even when session close fails', async () => {
+      const mockSession = { close: jest.fn().mockRejectedValue(new Error('Close failed')) };
+      mockClient.createSession.mockResolvedValueOnce(mockSession);
+
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          authenticationType: 'anonymous',
+        })
+      );
+
+      expect(mockClient.disconnect).toHaveBeenCalled();
+      expect(result).toEqual({
+        status: 'Error',
+        message: 'Close failed',
+      });
+    });
+
+    it('should handle opc.https:// protocol', async () => {
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.https://localhost:4840',
+          authenticationType: 'anonymous',
+        })
+      );
+
+      expect(mockClient.connect).toHaveBeenCalledWith('opc.https://localhost:4840');
+      expect(result.status).toBe('OK');
+    });
+
+    it('should clean up client on disconnect failure', async () => {
+      mockClient.disconnect.mockRejectedValueOnce(new Error('Disconnect failed'));
+      mockClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
+
+      const result = await opcuaNode.methods.credentialTest.opcuaConnectionTest.call(
+        mockCredentialTestFunctions,
+        testCredential({
+          endpointUrl: 'opc.tcp://localhost:4840',
+          authenticationType: 'anonymous',
+        })
+      );
+
+      expect(result).toEqual({
+        status: 'Error',
+        message: 'Connection failed',
+      });
+      // Should still attempt to disconnect despite the error
+      expect(mockClient.disconnect).toHaveBeenCalled();
+    });
   });
 });
